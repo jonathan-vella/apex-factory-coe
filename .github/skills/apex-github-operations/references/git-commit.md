@@ -6,11 +6,11 @@ No specific agent or model selection is required by this shared Git procedure.
 Entrypoint model preferences do not require runtime attestation here. This
 procedure neither changes the model nor widens access.
 
-Stage all changes **except** anything under `agent-output/`, `infra/`, or
-`.github/skills/sensei/` (the sensei exclusion is lifted only when the
-current branch is `feat/skills-sensei`), auto-generate a conventional
-commit, push to the current branch, then ask whether to open a new PR or
-update an existing one. Uses `git` and `gh` only — no MCP tools.
+Stage all non-ignored workspace changes, including `agent-output/`, `infra/`,
+and `.github/skills/sensei/`; auto-generate a conventional commit and push to
+the current branch. This repository permits a direct push to `main` when the
+user requests it. Ask about a PR only when pushing a non-main branch. Uses
+`git` and `gh` only — no MCP tools.
 
 ## Scope
 
@@ -25,10 +25,9 @@ update an existing one. Uses `git` and `gh` only — no MCP tools.
   compare `gh api user --jq .login` with the account in Git's denial. With explicit
   user authorization, use the command-scoped GitHub CLI helper shown in Step 4;
   do not change persistent credential configuration.
-- Excluded paths (always): `agent-output/`, `infra/`.
-- Excluded path (conditional): `.github/skills/sensei/` — included only
-  when `git branch --show-current` returns `feat/skills-sensei`.
-- Never commit to `main`. Never force-push.
+- No path exclusions beyond `.gitignore`; do not force-add ignored files or secrets.
+- A direct commit and push to `main` is permitted in this repository when requested by the user.
+- Never force-push.
 
 ### Identity And Access Troubleshooting
 
@@ -54,30 +53,21 @@ A read-only lookup verifies repository access, not write permission; only the au
 | -------- | --------------------------------------- | -------------- |
 | subject  | argument-hint or generated from diff    | auto           |
 | branch   | `git branch --show-current`             | current branch |
-| sensei   | derived: `branch == feat/skills-sensei` | exclude sensei |
-| pr_mode  | user choice (new / update / skip)       | ask            |
+| pr_mode  | user choice (new / update / skip; non-main only) | ask, non-main only |
 | pr_base  | user choice                             | `main`         |
 
 ## Workflow
 
-### Step 0 — Compute the exclusion pathspec
+### Step 0 — Identify the current branch
 
-Resolve the active branch and build the pathspec used by every subsequent
-`git` command:
+Resolve the active branch:
 
 ```bash
 BRANCH="$(git branch --show-current)"
-if [[ "$BRANCH" == "feat/skills-sensei" ]]; then
-  EXCLUDES=(':!agent-output' ':!infra')
-else
-  EXCLUDES=(':!agent-output' ':!infra' ':!.github/skills/sensei')
-fi
 ```
 
-Every `git add`/`git status`/`git diff` command below uses
-`-- . "${EXCLUDES[@]}"` to apply the exclusion list consistently. If the
-user is on `feat/skills-sensei` the sensei skill files are eligible for
-staging; on every other branch they are skipped.
+All following Git commands operate on the entire worktree. Git's normal
+ignore rules remain in force; never use force-add to include ignored files.
 
 ### Step 1 — Inspect
 
@@ -85,38 +75,25 @@ Run these in parallel and show the output:
 
 ```bash
 echo "$BRANCH"
-git status --short -- . "${EXCLUDES[@]}"
-git diff --stat HEAD -- . "${EXCLUDES[@]}"
+git status --short
+git diff --stat HEAD
 ```
 
 Stop if:
 
-- branch is `main` (refuse to commit).
-- the scoped status is empty (working tree clean within scope).
+- the worktree status is empty.
 
-Show a one-line note of any changes under the excluded folders so the user
-knows they were intentionally skipped:
+### Step 2 — Stage all changes
 
-```bash
-if [[ "$BRANCH" == "feat/skills-sensei" ]]; then
-  git status --short -- agent-output infra
-else
-  git status --short -- agent-output infra .github/skills/sensei
-fi
-```
+Inspect the existing index with `git diff --cached --name-only`. Review staged
+and unstaged changes, including user-authored changes, before staging. Do not
+commit secrets or ignored files. After staging, review the entire index and
+confirm it contains the intended worktree changes.
 
-### Step 2 — Stage scoped files
-
-First inspect the entire existing index with `git diff --cached --name-only`.
-If excluded paths are already staged, stop and report them. Do not unstage the
-user's work or commit it accidentally: pathspec exclusions on `git add` do not
-remove existing index entries. After staging, recheck the full index against
-the exclusions before committing.
-
-Stage every change **outside** the excluded folders:
+Stage every non-ignored change:
 
 ```bash
-git add -A -- . "${EXCLUDES[@]}"
+git add -A
 git diff --cached --stat
 ```
 
@@ -171,9 +148,10 @@ Show the resulting commit hash:
 git log -1 --pretty=format:'%h %s'
 ```
 
-### Step 5 — PR decision
+### Step 5 — PR decision (non-main branches only)
 
-Detect any open PR for this branch:
+If `BRANCH` is `main`, skip this step: the requested direct push is complete.
+Otherwise, detect any open PR for this branch:
 
 ```bash
 gh pr list --head "$BRANCH" --state open --json number,url,title
@@ -221,7 +199,7 @@ Print this summary table at the end:
 
 | Step         | Result                                                            |
 | ------------ | ----------------------------------------------------------------- |
-| Excluded     | `agent-output/`, `infra/` (+ `.github/skills/sensei/` off-branch) |
+| Excluded     | None (Git ignore rules still apply)                              |
 | Files staged | N files                                                           |
 | Commit       | `<hash>` `<subject>`                                              |
 | Push         | `origin/<branch>` — pushed                                        |
@@ -229,16 +207,14 @@ Print this summary table at the end:
 
 ## Rules
 
-- Never `git add` paths under `agent-output/` or `infra/`. Use the pathspec
-  exclude (`':!agent-output' ':!infra'`) on every staging command.
-- Always exclude `.github/skills/sensei/` **unless** the current branch is
-  `feat/skills-sensei`. The exclusion is computed once in Step 0 and reused
-  by every git command in the workflow.
-- Never commit to `main`. Stop with a warning if the current branch is `main`.
+- Stage all non-ignored workspace changes, including `agent-output/`, `infra/`,
+  and `.github/skills/sensei/`; inspect the complete staged diff before committing.
+- A direct commit and push to `main` is permitted in this repository when the
+  user requests it. Skip the PR decision when the pushed branch is `main`.
 - Never use `git push --force` or `--force-with-lease` in this procedure.
 - Step 3 is **non-interactive** — the prompt auto-generates the commit
-  message and commits without asking. The only remaining confirmation gate
-  is the PR action in Step 5.
+  message and commits without asking. The PR action in Step 5 applies only to
+  non-main branches.
 - Use `git` and `gh` exclusively — do not call any GitHub MCP tool.
 - Do not use interactive flags (`-i`) on `mv`/`rm`/`cp` or `read -p`. Pipe
   long output (>50 lines) into a file under `tmp/` if needed.

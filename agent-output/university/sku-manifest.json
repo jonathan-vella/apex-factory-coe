@@ -1,0 +1,179 @@
+{
+  "$schema": "../../tools/schemas/sku-manifest.schema.json",
+  "schema_version": "sku-manifest-v1",
+  "project": "university",
+  "default_region": "swedencentral",
+  "created_at": "2026-10-05T15:00:00Z",
+  "updated_at": "2026-10-05T15:00:00Z",
+  "current_revision": 1,
+  "environments": [
+    "dev"
+  ],
+  "revisions": [
+    {
+      "rev": 1,
+      "created_at": "2026-10-05T15:00:00Z",
+      "agent": "02-Requirements",
+      "step": "1",
+      "apex_recall_checkpoint": "university:1:phase_5_artifact",
+      "summary": "User pins from the B09 archetype brief for every service class; on-demand only, single dev environment, no zones; approved regions swedencentral + germanywestcentral.",
+      "changed_ids": [
+        "app-service-plan",
+        "container-registry",
+        "sql-managed-instance",
+        "storage-account",
+        "service-bus"
+      ]
+    }
+  ],
+  "services": [
+    {
+      "id": "app-service-plan",
+      "service": "App Service Plan",
+      "size": "P0v3",
+      "iac_logical_names": {
+        "bicep": "appServicePlan",
+        "terraform": "module.app_service_plan"
+      },
+      "capacity": {
+        "mode": "fixed",
+        "default": 1
+      },
+      "zonal": false,
+      "regions": [
+        "swedencentral",
+        "germanywestcentral"
+      ],
+      "sla_target": "best-effort (no target)",
+      "commitment": {
+        "type": "on-demand"
+      },
+      "requires": [
+        "vnet-integration",
+        "managed-identity"
+      ],
+      "notes": "Linux, container. Brief requires verifying P0v3 supports regional VNet integration; if not, use the smallest Premium v3 tier that does and record a deviation. Region derived from hub at deploy time. Approved regions: swedencentral (primary), germanywestcentral (owner-approved, same SKU; availability and pricing to be checked at Step 2).",
+      "source": "user-pin",
+      "source_step": "1",
+      "last_modified_rev": 1
+    },
+    {
+      "id": "container-registry",
+      "service": "Container Registry",
+      "size": "Premium",
+      "iac_logical_names": {
+        "bicep": "containerRegistry",
+        "terraform": "module.container_registry"
+      },
+      "capacity": {
+        "mode": "fixed",
+        "default": 1
+      },
+      "zonal": false,
+      "regions": [
+        "swedencentral",
+        "germanywestcentral"
+      ],
+      "sla_target": "best-effort (no target)",
+      "commitment": {
+        "type": "on-demand"
+      },
+      "requires": [
+        "private-endpoints",
+        "managed-identity"
+      ],
+      "notes": "No zones pinned; platform zone redundancy accepted per kit convention. Admin user off, public access off, trusted-services bypass for az acr import. Approved regions: swedencentral (primary), germanywestcentral (owner-approved, same SKU; availability and pricing to be checked at Step 2).",
+      "source": "user-pin",
+      "source_step": "1",
+      "last_modified_rev": 1
+    },
+    {
+      "id": "sql-managed-instance",
+      "service": "SQL Managed Instance",
+      "size": "GP_Gen5",
+      "iac_logical_names": {
+        "bicep": "sqlManagedInstance",
+        "terraform": "module.sql_managed_instance"
+      },
+      "capacity": {
+        "mode": "fixed",
+        "default": 1
+      },
+      "zonal": false,
+      "regions": [
+        "swedencentral",
+        "germanywestcentral"
+      ],
+      "sla_target": "best-effort (no target)",
+      "commitment": {
+        "type": "on-demand"
+      },
+      "requires": [
+        "managed-identity"
+      ],
+      "notes": "General Purpose, Standard-series (Gen5), 4 vCores, 64 GB storage. licenseType BasePrice (AHB), requestedBackupStorageRedundancy Local, SQLServer2022 format, Entra-only. Approved regions: swedencentral (primary), germanywestcentral (owner-approved, same SKU; availability and pricing to be checked at Step 2).",
+      "source": "user-pin",
+      "source_step": "1",
+      "last_modified_rev": 1
+    },
+    {
+      "id": "storage-account",
+      "service": "Storage Account",
+      "size": "Standard_LRS",
+      "iac_logical_names": {
+        "bicep": "storageAccount",
+        "terraform": "module.storage_account"
+      },
+      "capacity": {
+        "mode": "fixed",
+        "default": 1
+      },
+      "zonal": false,
+      "regions": [
+        "swedencentral",
+        "germanywestcentral"
+      ],
+      "sla_target": "best-effort (no target)",
+      "commitment": {
+        "type": "on-demand"
+      },
+      "requires": [
+        "private-endpoints"
+      ],
+      "notes": "StorageV2 (general-purpose v2), LRS. Shared key access off. Approved regions: swedencentral (primary), germanywestcentral (owner-approved, same SKU; availability and pricing to be checked at Step 2).",
+      "source": "user-pin",
+      "source_step": "1",
+      "last_modified_rev": 1
+    },
+    {
+      "id": "service-bus",
+      "service": "Service Bus Namespace",
+      "size": "Premium",
+      "iac_logical_names": {
+        "bicep": "serviceBusNamespace",
+        "terraform": "module.service_bus_namespace"
+      },
+      "capacity": {
+        "mode": "fixed",
+        "default": 1
+      },
+      "zonal": false,
+      "regions": [
+        "swedencentral",
+        "germanywestcentral"
+      ],
+      "sla_target": "best-effort (no target)",
+      "commitment": {
+        "type": "on-demand"
+      },
+      "requires": [
+        "private-endpoints",
+        "managed-identity"
+      ],
+      "notes": "1 messaging unit. No zones pinned; platform zone redundancy accepted. Local (SAS) auth off. Approved regions: swedencentral (primary), germanywestcentral (owner-approved, same SKU; availability and pricing to be checked at Step 2).",
+      "source": "user-pin",
+      "source_step": "1",
+      "last_modified_rev": 1
+    }
+  ]
+}

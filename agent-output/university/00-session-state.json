@@ -1,0 +1,200 @@
+{
+  "schema_version": "3.0",
+  "project": "university",
+  "iac_tool": "",
+  "region": "swedencentral",
+  "branch": "main",
+  "updated": "2026-10-05T15:51:45Z",
+  "current_step": 1,
+  "decisions": {
+    "region": "swedencentral",
+    "compliance": "none (training/demo; ALZ-lite deny policies binding)",
+    "budget": "soft; ~1.83 USD/hour workload (brief estimate)",
+    "architecture_pattern": "n-tier: Linux container App Service + SQL MI + Storage + Service Bus + Key Vault + App Insights",
+    "deployment_strategy": "",
+    "complexity": "standard",
+    "review_depth": "default",
+    "iac_tool": "bicep",
+    "sku_preferences_captured": "true",
+    "relational_db": "sql-managed-instance",
+    "environment": "dev",
+    "cost_monitoring_mode": "deferred",
+    "cost_alert_emails": "[]",
+    "sla_rto_rpo": "best-effort; redeploy from IaC",
+    "end_user_auth": "out-of-scope (B06/B10)",
+    "sku_commitment": "on-demand",
+    "sku_manifest_status": "draft",
+    "sku_manifest_revision": "1",
+    "approved_regions": "[\"swedencentral\",\"germanywestcentral\"]",
+    "sql_mi_license_type": "BasePrice",
+    "cost_monitoring_exception": "{\"rationale\":\"Inherited from landing zone: vending (B08) creates subscription budget budget-factory-workload with 80% e-mail alert; archetype creates no budget or Action Group. Review with SKU manifest expiry or sooner if B08 vending budget changes or event date is set.\",\"expiry_date\":\"2027-01-03\"}",
+    "sql_mi_schedule": "{\"time_zone\":\"W. Europe Standard Time\",\"start\":\"Mon-Fri 07:30\",\"stop\":\"Mon-Fri 18:30\",\"enabled\":true}"
+  },
+  "open_findings": [
+    "must_fix|accept|dffe7aab|ACR trusted-services bypass is not an exception to the public-access Deny|Owner-reconciled mitigation: keep publicNetworkAccess Disabled and networkRuleBypassOptions AzureServices; record the by",
+    "must_fix|accept|de18805f|Public Application Insights ingestion has no authenticated-ingestion requirement|User instructed must-fix items be fixed. Added Entra-authenticated ingestion, local auth disabled, Monitoring Metrics Pu",
+    "must_fix|accept|d78e0214|The deployer authorization needed to provision resources and assign UAMI roles is unspecified|User instructed must-fix items be fixed. Added control-plane prerequisites row and preflight capability 14; exact least-",
+    "must_fix|accept|4241eef7|Private-endpoint DNS readiness is treated as best-effort despite being required for app startup|User instructed must-fix items be fixed. Added capability 15 readiness gate (DINE verification at Step 3.5, post-deploy ",
+    "should_fix|accept|c424c36d|Three fallback tag values are deferred to a discovery step that may not supply them|sla=best-effort, backup-policy=platform-default, maint-window=system-default",
+    "should_fix|accept|95a0a270|The regional SKU manifest cannot satisfy the stated Germany West Central deployment alternative|Deploy only when discovered hub region is an approved manifest region, else block. Owner approves germanywestcentral as ",
+    "should_fix|reject|436603c6|SQL Managed Instance Azure Hybrid Benefit is selected without confirming license eligibility|Owner decision: BasePrice stays default on the stated assumption the partner holds eligible SQL Server core licences wit",
+    "should_fix|accept|117ca0af|EU telemetry residency is asserted without constraining the central workspace region|Pre-deploy check reads log-management region in rg-management (shared services); continue only if swedencentral or germa",
+    "must_fix|accept|6bd644f1|AcrPush cannot authorize ACR import|Added Container Registry Data Importer and Data Reader + preflight",
+    "should_fix|accept|fefa3874|No-Owner fallback lacks Action Group resume gate|Edit: cost monitoring inherited from LZ budget-factory-workload; read-only pre-deploy check",
+    "should_fix|accept|c39d664c|MCR egress best-effort for placeholder startup|Required; afwp-hub app-to-mcr preflight; post-deploy pull test; no fallback",
+    "must_fix|accept|d6b93f20|Placeholder image cannot serve HTTPS|samples:aspnetapp-10.0 pinned, WEBSITES_PORT=8080",
+    "must_fix|accept|d8b0dea0|MCR preflight lacks firewall-policy read access|Added afwp-hub read to deployer prerequisites; fail closed",
+    "must_fix|accept|92875fd7|Image-pull route not explicitly enabled|Added outboundVnetRouting.imagePullTraffic=true + verification",
+    "should_fix|accept|ed95ae4f|SQL MI schedule lacks window/time zone|W. Europe Standard Time Mon-Fri 07:30-18:30, params, enabled",
+    "must_fix|accept|fdd1172c|Budget preflight lacks budget-read authorization|Added budget read to deployer prerequisites; fail closed",
+    "should_fix|defer|f42fd8e0|Deferred cost-monitoring exception not in governance state|Carried to handoff for Step 3.5"
+  ],
+  "decision_log": [
+    {
+      "decision": "review_depth=default is the system default, not a user selection",
+      "timestamp": "2026-10-05T14:40:23Z",
+      "rationale": "Corrects an earlier mis-attributed rationale; user never chose a review depth",
+      "step": "1"
+    },
+    {
+      "decision": "cost_alert_emails cleared to [] under cost_monitoring_mode=minimal",
+      "timestamp": "2026-10-05T15:08:47Z",
+      "rationale": "Owner flagged prior address as unsourced; no kit vending budget address exists in this workspace; Step 4 must ask if no human Owner exists at budget scope",
+      "step": "1"
+    }
+  ],
+  "review_audit": {
+    "step_1": {
+      "complexity": "",
+      "passes_planned": 0,
+      "passes_executed": 0,
+      "skipped": [],
+      "skip_reasons": [],
+      "models_used": []
+    },
+    "step_2": {
+      "complexity": "",
+      "passes_planned": 0,
+      "passes_executed": 0,
+      "skipped": [],
+      "skip_reasons": [],
+      "models_used": []
+    },
+    "step_3_5": {
+      "complexity": "",
+      "passes_planned": 0,
+      "passes_executed": 0,
+      "skipped": [],
+      "skip_reasons": [],
+      "models_used": []
+    },
+    "step_4": {
+      "complexity": "",
+      "passes_planned": 0,
+      "passes_executed": 0,
+      "skipped": [],
+      "skip_reasons": [],
+      "models_used": []
+    },
+    "step_5": {
+      "complexity": "",
+      "passes_planned": 0,
+      "passes_executed": 0,
+      "skipped": [],
+      "skip_reasons": [],
+      "models_used": []
+    },
+    "step_6": {
+      "complexity": "",
+      "passes_planned": 0,
+      "passes_executed": 0,
+      "skipped": [],
+      "skip_reasons": [],
+      "models_used": []
+    }
+  },
+  "steps": {
+    "1": {
+      "name": "Requirements",
+      "agent": "02-Requirements",
+      "status": "complete",
+      "sub_step": null,
+      "started": "2026-10-05T14:30:36Z",
+      "completed": "2026-10-05T15:51:45Z",
+      "artifacts": [
+        "agent-output/university/challenge-findings-requirements.json"
+      ],
+      "context_files_used": []
+    },
+    "2": {
+      "name": "Architecture",
+      "agent": "03-Architect",
+      "status": "pending",
+      "sub_step": null,
+      "started": null,
+      "completed": null,
+      "artifacts": [],
+      "context_files_used": []
+    },
+    "3": {
+      "name": "Design",
+      "agent": "04-Design",
+      "status": "pending",
+      "sub_step": null,
+      "started": null,
+      "completed": null,
+      "artifacts": [],
+      "context_files_used": []
+    },
+    "3_5": {
+      "name": "Governance",
+      "agent": "04g-Governance",
+      "status": "pending",
+      "sub_step": null,
+      "started": null,
+      "completed": null,
+      "artifacts": [],
+      "context_files_used": []
+    },
+    "4": {
+      "name": "IaC Plan",
+      "agent": "",
+      "status": "pending",
+      "sub_step": null,
+      "started": null,
+      "completed": null,
+      "artifacts": [],
+      "context_files_used": []
+    },
+    "5": {
+      "name": "IaC Code",
+      "agent": "",
+      "status": "pending",
+      "sub_step": null,
+      "started": null,
+      "completed": null,
+      "artifacts": [],
+      "context_files_used": []
+    },
+    "6": {
+      "name": "Deploy",
+      "agent": "",
+      "status": "pending",
+      "sub_step": null,
+      "started": null,
+      "completed": null,
+      "artifacts": [],
+      "context_files_used": []
+    },
+    "7": {
+      "name": "As-Built",
+      "agent": "08-As-Built",
+      "status": "pending",
+      "sub_step": null,
+      "started": null,
+      "completed": null,
+      "artifacts": [],
+      "context_files_used": []
+    }
+  }
+}

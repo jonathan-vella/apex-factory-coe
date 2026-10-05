@@ -1,7 +1,7 @@
 ---
 agent: agent
 model: "MAI-Code-1.1-Flash"
-description: "Stage everything except agent-output/, infra/, and .github/skills/sensei/ (unless on feat/skills-sensei), auto-generate a conventional commit, push, then prompt to open or update a PR. CLI-only (git + gh)."
+description: "Stage all non-ignored workspace changes, auto-generate a conventional commit, push the current branch (including main when requested), and prompt for a PR only on non-main branches. CLI-only (git + gh)."
 argument-hint: "Optional commit subject. Leave blank to auto-generate from the diff."
 tools: [vscode/askQuestions, execute/runInTerminal, read, todo]
 ---
