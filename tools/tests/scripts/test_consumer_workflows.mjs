@@ -33,7 +33,7 @@ test("actual template guards block product/template operations and require gover
       const expression = new Parser(new Lexer(job.if).lex().tokens, ["github", "vars"], []).parse();
       for (const repository of [
         "jonathan-vella/apex",
-        "jonathan-vella/apex-factory-coe",
+        "jonathan-vella/apex-accelerator",
         "jonathan-vella/apex-docs",
         "example/consumer",
       ]) {

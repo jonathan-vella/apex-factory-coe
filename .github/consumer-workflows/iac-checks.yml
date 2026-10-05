@@ -34,7 +34,7 @@ concurrency:
 
 jobs:
   terraform:
-    if: github.repository != 'jonathan-vella/apex' && github.repository != 'jonathan-vella/apex-factory-coe' && github.repository != 'jonathan-vella/apex-docs' && github.event.repository.is_template != true
+    if: github.repository != 'jonathan-vella/apex' && github.repository != 'jonathan-vella/apex-accelerator' && github.repository != 'jonathan-vella/apex-docs' && github.event.repository.is_template != true
     name: Terraform fmt + validate
     runs-on: ubuntu-latest
     steps:
@@ -50,6 +50,8 @@ jobs:
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: "1.16.5"
 
       - name: Terraform format check
         run: npm run lint:terraform-fmt
@@ -61,7 +63,7 @@ jobs:
         run: npm run validate:terraform
 
   bicep:
-    if: github.repository != 'jonathan-vella/apex' && github.repository != 'jonathan-vella/apex-factory-coe' && github.repository != 'jonathan-vella/apex-docs' && github.event.repository.is_template != true
+    if: github.repository != 'jonathan-vella/apex' && github.repository != 'jonathan-vella/apex-accelerator' && github.repository != 'jonathan-vella/apex-docs' && github.event.repository.is_template != true
     name: Bicep fmt
     runs-on: ubuntu-latest
     steps:

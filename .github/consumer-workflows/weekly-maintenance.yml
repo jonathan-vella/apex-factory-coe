@@ -40,7 +40,7 @@ permissions:
 
 jobs:
   azure-mcp-release:
-    if: github.repository != 'jonathan-vella/apex' && github.repository != 'jonathan-vella/apex-factory-coe' && github.repository != 'jonathan-vella/apex-docs' && github.event.repository.is_template != true
+    if: github.repository != 'jonathan-vella/apex' && github.repository != 'jonathan-vella/apex-accelerator' && github.repository != 'jonathan-vella/apex-docs' && github.event.repository.is_template != true
     name: Check Azure MCP Stable Release
     runs-on: ubuntu-latest
     permissions:
@@ -56,7 +56,7 @@ jobs:
         run: npm run check:mcp-release
 
   refresh-avm-module-index:
-    if: github.repository != 'jonathan-vella/apex' && github.repository != 'jonathan-vella/apex-factory-coe' && github.repository != 'jonathan-vella/apex-docs' && github.event.repository.is_template != true
+    if: github.repository != 'jonathan-vella/apex' && github.repository != 'jonathan-vella/apex-accelerator' && github.repository != 'jonathan-vella/apex-docs' && github.event.repository.is_template != true
     name: Refresh AVM Module Index
     runs-on: ubuntu-latest
     permissions:
@@ -121,7 +121,7 @@ jobs:
           echo "🔗 ${{ steps.cpr.outputs.pull-request-url }}"
 
   track-deprecations:
-    if: github.repository != 'jonathan-vella/apex' && github.repository != 'jonathan-vella/apex-factory-coe' && github.repository != 'jonathan-vella/apex-docs' && github.event.repository.is_template != true
+    if: github.repository != 'jonathan-vella/apex' && github.repository != 'jonathan-vella/apex-accelerator' && github.repository != 'jonathan-vella/apex-docs' && github.event.repository.is_template != true
     name: Track Azure Deprecations
     runs-on: ubuntu-latest
     permissions:
