@@ -1,0 +1,168 @@
+# APEX
+
+## Setup Commands
+
+```bash
+# Clone the Accelerator template and open in dev container
+# https://github.com/jonathan-vella/apex-accelerator
+git clone https://github.com/YOUR-USERNAME/my-infraops-project.git && cd my-infraops-project
+code . # then: F1 → Dev Containers: Reopen in Container
+
+npm install                              # Node.js deps (validators, linting)
+npm run setup                            # Azure + GitHub OIDC/secrets/RBAC
+```
+
+> Python deps (diagrams and apex-recall) install automatically
+> via the dev container's `post-create.sh`. Setup details:
+> https://apexops.pro/getting-started/azure-setup/
+
+## Build & Validation
+
+```bash
+# Full validation suite
+npm run validate:all
+
+# Individual checks (most-used)
+npm run lint:md                          # Markdown linting
+npm run lint:json                        # JSON/JSONC validation
+npm run validate:agents                  # Agent + prompt frontmatter, model alignment
+npm run validate:agent-registry          # Registry shape (file path, model, step)
+npm run validate:iac-security-baseline   # TLS/HTTPS/Entra-only/no-public-blob baseline
+npm run lint:safe-shell                  # No interactive shell prompts in committed snippets
+
+# Full list → npm run | grep -E "^  (lint|validate|test):" or
+# https://apexops.pro/reference/validation-reference/
+
+# Pre-commit/pre-push hooks (installed via lefthook on `npm run prepare`)
+git push                                 # Triggers diff-based-push-check.sh automatically
+
+# IaC validation
+bicep build infra/bicep/{project}/main.bicep && bicep lint infra/bicep/{project}/main.bicep
+terraform fmt -check -recursive infra/terraform/ && npm run validate:terraform
+```
+
+## Code Style
+
+Code style (CAF naming, required tags, default region, AVM-first, unique
+suffix pattern) is documented in
+[.github/skills/apex-azure-defaults/SKILL.md](.github/skills/apex-azure-defaults/SKILL.md).
+Agents read that file as part of their mandatory skill load; this file
+no longer duplicates the tables.
+
+## Security Baseline
+
+The non-negotiable security baseline (TLS 1.2 minimum, HTTPS-only, no public
+blob, no shared key, Managed Identity, Entra-only SQL, App Service HTTP/2,
+Container Registry admin disabled, MySQL/PostgreSQL SSL, no public network
+access for PaaS data services except the Azure Monitor allowance below, private App Service APIs,
+mandatory private DNS, no hardcoded secrets) is documented in
+[.github/instructions/references/iac-policy-compliance.md](.github/instructions/references/iac-policy-compliance.md).
+Log Analytics and workspace-based Application Insights may use authenticated public query/ingestion when
+effective policy and approved requirements permit it. AMPLS is not required by default; private-only monitoring
+requirements still apply. See the [networking baseline](.github/instructions/references/iac-security-baseline.md).
+This is the source of truth for IaC validators (`validate:iac-security-baseline`)
+and the Architect / IaC Planner / CodeGen agents. Always cross-check
+`04-governance-constraints.md` for subscription-level Azure Policy
+requirements that may add to the baseline.
+
+## Commit & PR Guidelines
+
+Use [Conventional Commits](https://www.conventionalcommits.org/):
+`<type>[optional scope]: <description>`. Types: `feat` (feature), `fix`,
+`docs`, `refactor`, `ci`, `chore`. Scopes: `agents`, `skills`, `instructions`,
+`bicep`, `terraform`, `mcp`, `docs`, `scripts`. Run `npm run lint:md` and
+relevant validations before committing.
+
+## Agent Workflow
+
+| Step | Phase        | Output                                                   | Review                                                    |
+| ---- | ------------ | -------------------------------------------------------- | --------------------------------------------------------- |
+| 1    | Requirements | `01-requirements.md` + `sku-manifest.{json,md}` (rev 1)  | 1× comprehensive (mandatory)                              |
+| 2    | Architecture | `02-architecture-assessment.md` + cost estimate          | comprehensive + separate cost-feasibility (both mandatory; deep is opt-in) |
+| 3    | Design (opt) | `03-des-*.{py,png,md}` diagrams and ADRs                 | opt-in: 1× comprehensive on ADRs (skipped when no Step 3) |
+| 3.5  | Governance   | `04-governance-constraints.md/.json`                     | 1× governance-reconciliation (skip when no constraints)   |
+| 4    | IaC Plan     | `04-implementation-plan.md` + `04-*-diagram.py/.png`     | 1× comprehensive (mandatory; opt-in: deep)                |
+| 5    | IaC Code     | `infra/bicep/{project}/` or `infra/terraform/{project}/` | opt-in (default: skip)                                    |
+| 6    | Deploy       | `06-deployment-summary.md`                               | none (policy precheck folded in as informational H2)      |
+| 7    | As-Built     | `07-*.md` documentation suite                            | —                                                         |
+| Post | Lessons      | `09-lessons-learned.json/.md`                            | —                                                         |
+
+All outputs → `agent-output/{project}/`. Source of truth:
+`.github/skills/apex-workflow-engine/templates/workflow-graph.json`.
+The Orchestrator drives all steps with human approval gates. The unified
+05-IaC Planner feeds dual IaC tracks: Bicep (06b/07b) and Terraform (06t/07t).
+Architecture also requires an independent cost-feasibility review in every mode.
+Rotating multi-pass reviews are an explicit opt-in via
+`decisions.review_depth = "deep"` (captured once per project by
+01-Orchestrator) or via direct `10-Challenger` invocation. Reviews target
+AI-generated creative decisions — not tool output (what-if/plan previews).
+
+Production main agents, including `10-Challenger`, are human-selected entry points
+with `disable-model-invocation: true`; the Orchestrator uses human handoffs only.
+Unavailable reviewers require a human handoff to `10-Challenger`, never a nested
+wrapper fallback. Missing/empty reviewer output permits exactly one identical-input
+retry, then human escalation. Preserve current review evidence and approval gates.
+
+Local prompt files are adapters; Agent Host uses shared skills with the caller's
+model/tools and explicit selection of the owning agent. Legacy discovery settings
+are not a security boundary. Model labels do not establish runtime cost-tier
+eligibility or API support. Runtime rules and canonical review procedure:
+[Copilot instructions](.github/copilot-instructions.md#harness-and-runtime-boundaries).
+
+The E2E launch subsystem is retired. Production lesson collection, historical
+lesson/schema compatibility, and existing evidence remain supported; historical
+`e2e` values do not authorize a runnable workflow or automatic approval.
+
+**Mandatory challenger reviews are enforced at runtime, not just at commit.**
+`apex-recall complete-step` refuses to mark Steps 1, 2, 3.5, or 4 as complete
+when the gating artifact exists but the matching `challenge-findings-*.json`
+sidecar is missing (exit code 2). Both `complete-step` and `transition --complete` also reject
+present reviews with unresolved must-fix findings, mismatched artifact/lens, or failed strict freshness validation,
+before any state mutation. This requires Node and the workspace review validator; unavailable validation fails closed.
+An accepted decision is not verified closure. Invalid present evidence cannot use a missing-review bypass.
+For a separately authorized later Governance review, `complete-step` and `transition --complete` accept
+`--governance-review <path>` with `--governance-review-reason "<reason>"`. Selection is explicit, Step 3.5-only,
+strictly validated and logged with its byte hash; earlier reviews remain untouched. No latest-file inference,
+review-budget reset or human approval is implied. The selected review cannot use the missing-review bypass.
+Step 4 default-mode comprehensive confirmations use `--plan-review <path>` and `--plan-review-reason "<reason>"`
+under the same strict checks and audit rules. The original Plan review stays intact. This option cannot replace
+deep-review lenses, combine with a Governance selector or waive any approval/review requirement.
+New selections are persisted as structured `review-selection-v1` records and revalidated by completion and
+`apex-recall show`; legacy audit prose is not automatically migrated. Unchanged repeat completion preserves timestamps.
+State writers reject revision conflicts. Index failure after commit returns `committed_but_index_stale` with the
+committed hash; explicitly reindex instead of repeating the mutation. Normal reads never restore backups; use the
+owner-authorized `recover-state` command. Compatibility, attempt accounting and exact view fields:
+[`show-schema.md`](tools/apex-recall/docs/show-schema.md).
+An intentional missing-review bypass requires
+`--allow-missing-challenger --challenger-skip-reason "<text>"`, which
+persists an audit entry in `decisions.challenger_skip[]`. A CI/commit
+fallback (`npm run validate:challenger-presence`, also wired into the
+lefthook `artifact-validation` hook) checks presence if session state was edited by hand;
+it does not replace the runtime validity gate or independent approval checks.
+
+Artifact lint is enforced by the lefthook `artifact-validation` pre-commit
+hook and the `10-Challenger` review — agents do not call
+`lint:artifact-templates` or `markdownlint-cli2` directly against
+`agent-output/**` (see
+[`.github/instructions/agent-authoring.instructions.md`](.github/instructions/agent-authoring.instructions.md#no-direct-markdownlint-on-agent-output-rule)).
+
+`sku-manifest.{json,md}` is created at Step 1 (user pins only — empty
+`services[]` is the common case) and mutated through Step 7: Step 2
+authoring, Step 3.5 read-only findings, Step 4 reconciliation +
+`requires[]` cross-check, Step 6 substitution on quota/region conflict
+(via the block-with-escalation pattern), Step 7 bidirectional drift
+detection. Authoring rules:
+[`.github/instructions/sku-manifest.instructions.md`](.github/instructions/sku-manifest.instructions.md).
+
+## Conventions Detail
+
+For deeper guidance, agents read these on demand:
+
+- Bicep conventions: `infra/bicep/AGENTS.md`
+- Terraform conventions: `infra/terraform/AGENTS.md`
+- azd multi-project rules: `.github/instructions/azure-yaml.instructions.md` (auto-loaded for `azure.yaml`)
+- Terminal hygiene (no `mv -i`/`rm -i`/`read -p`, pipe long output to file):
+  `.github/instructions/no-interactive-shell.instructions.md` (enforced by `lint:safe-shell`)
+- Azure defaults: `.github/skills/apex-azure-defaults/SKILL.md`
+- Workflow DAG: `.github/skills/apex-workflow-engine/templates/workflow-graph.json`
+- Full validation reference: <https://apexops.pro/reference/validation-reference/>
