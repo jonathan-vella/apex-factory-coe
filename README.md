@@ -1,392 +1,105 @@
-<!-- markdownlint-disable MD013 MD033 MD041 -->
+<!-- markdownlint-disable MD033 MD041 -->
 
-# APEX Accelerator
+# APEX Factory CoE
 
 <div align="center">
   <img
-   src="https://capsule-render.vercel.app/api?type=waving&height=180&color=0:0A66C2,50:0078D4,110:00B7C3&text=APEX&fontSize=44&fontColor=FFFFFF&fontAlignY=34&desc=Agentic%20Platform%20Engineering%20eXperience%20for%20Azure&descAlignY=56"
-   alt="APEX banner" />
+   src="https://capsule-render.vercel.app/api?type=waving&height=180&color=0:0A66C2,50:0078D4,110:00B7C3&text=APEX%20Factory%20CoE&fontSize=40&fontColor=FFFFFF&fontAlignY=34&desc=CoE%20archetype%20for%20the%20Partner%20Modernization%20Factory%20hackathon&descAlignY=56"
+   alt="APEX Factory CoE banner" />
 </div>
 
-> **Modernize your Azure Infrastructure with AI.** A production-ready template for building Well-Architected
-> environments using custom Copilot agents, Dev Containers, and the Model Context Protocol (MCP).
+> The Center of Excellence (CoE) workspace for the
+> [Partner Modernization Factory hackathon](https://github.com/jonathan-vella/apex-factory-hackathon).
+> The CoE uses [APEX](https://apexops.pro/) here to design and build the **CoE archetype** that every
+> hackathon member later deploys into their vended spoke.
 
 [![Azure](https://img.shields.io/badge/Azure-0078D4?logo=microsoft-azure&logoColor=white)](https://azure.microsoft.com)
 [![Bicep](https://img.shields.io/badge/Bicep-0078D4?logo=azure-pipelines&logoColor=white)](https://github.com/Azure/bicep)
-[![Terraform](https://img.shields.io/badge/Terraform-7B42BC?logo=terraform&logoColor=white)](https://www.terraform.io)
 [![Copilot](https://img.shields.io/badge/GitHub_Copilot-000000?logo=github-copilot&logoColor=white)](https://github.com/features/copilot)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-## Overview
+## What this repo is for
 
-This accelerator provides the scaffolding and governance to move from requirements to deployed infrastructure
-using an orchestrated multi-agent workflow. It leverages domain-specific AI agents to ensure every deployment
-is Well-Architected, governed, and documented.
+This repo was created from the [`apex-accelerator`](https://github.com/jonathan-vella/apex-accelerator)
+template. It is where the CoE runs APEX steps 1–5 for the hackathon's landing-zone workload, passing every
+human gate and challenger review. It is not the hackathon kit and attendees don't work in it.
 
-**What you get**: Specialized agents, skills, validation scripts, a full dev container with all
-tools pre-installed, and an optional weekly sync workflow that keeps your agents and skills up to date with
-the [upstream APEX project](https://github.com/jonathan-vella/apex).
-
----
-
-## Prerequisites
-
-| Requirement            | Details                                              |
-| ---------------------- | ---------------------------------------------------- |
-| **VS Code**            | Latest stable release                                |
-| **GitHub Copilot**     | Active license (Individual, Business, or Enterprise) |
-| **Docker Desktop**     | For the dev container (or GitHub Codespaces)         |
-| **Azure subscription** | Required (Owner or Contributor on the target subscription) |
-
----
-
-## Quick Start
-
-### 1. Create Your Repository
-
-This repository is a **GitHub Template** — not a fork.
-
-1. Click **"Use this template"** → **"Create a new repository"** at the top of this page
-2. Choose an owner and name (e.g., `my-infraops-project`)
-3. Select **Private** (do not use Public)
-4. Click **Create repository**
-
-> Your new repo has the same directory structure and files but a **clean commit history**
-> and no fork relationship. It is entirely yours.
-
-### 2. Clone and Open in Dev Container
-
-```bash
-git clone https://github.com/YOUR-USERNAME/my-infraops-project.git
-cd my-infraops-project
-code .
+```mermaid
+flowchart LR
+    BRIEF["Kit: archetype/BRIEF.md"] --> COE["This repo: APEX steps 1–5<br/>(Requirements → Bicep)"]
+    COE --> KIT["Kit: archetype/<br/>(artifacts, state, Bicep)"]
+    KIT --> MEMBER["Member's APEX repo<br/>Deploy (step 6) + As-Built (step 7)"]
 ```
 
-When prompted by VS Code, click **"Reopen in Container"** (or run `Dev Containers: Reopen in Container`
-from the Command Palette). The container build takes 3-5 minutes and pre-installs:
+1. **Input.** [`archetype/BRIEF.md`](https://github.com/jonathan-vella/apex-factory-hackathon/issues/9) in the
+   hackathon kit is the workload brief pasted into Step 1 (Requirements).
+2. **Build.** APEX runs Requirements → Architecture → Design → Governance → IaC Plan → Bicep code here.
+3. **Package.** The finished project (`agent-output/university/`, `infra/bicep/university/`) is copied into the
+   kit's `archetype/` folder, pinned to this repo's commit.
+4. **Deploy.** At the event, each member copies `archetype/` into their own APEX repo and runs only APEX Deploy
+   and As-Built, supplying a tenant ID, subscription ID and unique suffix.
 
-- Azure CLI with Bicep extension
-- Terraform CLI with TFLint
-- GitHub CLI (`gh`)
-- Node.js + npm (validation scripts)
-- Python 3 + pip (MCP server, diagram generation)
-- Go (Terraform MCP server)
+## The archetype
 
-### 3. Initialize Your Repository
+| Item           | Value                                                                                 |
+| -------------- | ------------------------------------------------------------------------------------- |
+| APEX project   | `university` (Contoso University)                                                     |
+| IaC            | Bicep only, AVM modules where available                                               |
+| Target         | The member's existing vended Corp spoke under ALZ-lite (no new VNet, subnets or DNS)  |
+| Services       | App Service for Linux (containers), ACR Premium, SQL Managed Instance General Purpose, Blob Storage, Service Bus Premium, Key Vault, Application Insights |
+| Region         | Derived from the hub (`swedencentral` by default)                                     |
+| Governance     | Must pass every ALZ-lite deny policy; private endpoints register in the central DNS zones by policy |
 
-After the dev container starts, run the initialization commands:
+Scope and decisions live in the kit's [PRD](https://github.com/jonathan-vella/apex-factory-hackathon/blob/main/docs/prd.md)
+and backlog item [B09](https://github.com/jonathan-vella/apex-factory-hackathon/issues/9).
 
-```bash
-npm install
-npm run init
-npm run sync:workflows
-```
-
-**What these do:**
-
-| Command                  | Purpose                                                                                                                                                                                       |
-| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `npm install`            | Install Node.js dependencies (validation scripts, linting)                                                                                                                                    |
-| `npm run init`           | **One-time setup** — replaces all references to the accelerator template repo with your repo's URL (auto-detected from git remote). Run `npm run init -- --dry-run` first to preview changes. |
-| `npm run sync:workflows` | Fetches the latest GitHub Actions workflows from the [upstream APEX project](https://github.com/jonathan-vella/apex) into your `.github/workflows/` directory                |
-
-> **Note:** Python dependencies (diagrams, Azure Pricing MCP server, apex-recall) are installed
-> automatically by the dev container's `post-create.sh` script. No manual `pip install` is needed.
-
-After running, review and commit:
-
-```bash
-git --no-pager diff
-git add -A && git commit -m "chore: initialize from template"
-git push
-```
-
-> **Expected diff:** You will see changes to `AGENTS.md`, `CONTRIBUTING.md`, and one or more
-> `.github/workflows/` files. You may also see formatting-only changes to `.vscode/mcp.json`
-> (the dev container normalizes its JSON arrays to multi-line format on first start) — this is
-> expected and safe to commit.
->
-> **Tip:** Use `git --no-pager diff` instead of plain `git diff` to avoid the `less` pager.
-> If you do use `git diff` and see a `:` prompt, press `q` to exit or `Space` to scroll.
-
-### 4. Set Up Azure
-
-Run the setup wizard to configure Azure OIDC authentication, RBAC roles, and GitHub
-secrets/variables — all in one command:
-
-```bash
-az login
-npm run setup
-```
-
-The wizard creates an Entra ID app registration, OIDC federated credentials (for
-main branch + dev/staging/prod environments), assigns Reader at your Management Group
-and Contributor at your subscription, and configures all GitHub secrets and variables.
-It is idempotent — safe to re-run.
-
-See the [Azure Setup documentation](https://apexops.pro/getting-started/azure-setup/)
-for headless mode, manual setup steps, and troubleshooting.
-
-### 5. Allow GitHub Actions to Create Pull Requests
-
-The maintenance workflows (step 6) open pull requests automatically when they
-detect drift. This requires one permission change in your repository settings.
-
-1. Go to your repository on GitHub
-2. Click **Settings → Actions → General**
-3. Scroll to **Workflow permissions**
-4. Check **Allow GitHub Actions to create and approve pull requests**
-5. Click **Save**
-
-> **Why:** GitHub disables this by default on all new repositories.
-> Without it, any workflow that opens a PR will fail with:
-> `GitHub Actions is not permitted to create or approve pull requests`
-
-### 6. Run the Maintenance Workflows
-
-After Azure setup completes, trigger the two scheduled maintenance workflows once
-so your repository has a fresh baseline before you start working. Both run weekly
-on Mondays after this initial seed.
-
-```bash
-gh workflow run "Weekly Maintenance"
-gh workflow run "Governance Policy Baseline"
-```
-
-| Workflow                       | Purpose                                                                                                                                              | Schedule                |
-| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
-| **Weekly Maintenance**         | Refreshes the AVM module index, tracks Azure service deprecations, runs the quarterly docs/orphan audit, validates Draw.io tooling, and link-checks docs. | Mondays 06:00 UTC       |
-| **Governance Policy Baseline** | Collects effective Azure Policy assignments (including management-group inheritance) from your subscription into `agent-output/_baseline/` so the IaC planner consumes real governance constraints. Requires step 4 to be complete. | Mondays 05:00 UTC       |
-
-Verify both runs succeeded before continuing:
-
-```bash
-gh run list --workflow "Weekly Maintenance" --limit 1
-gh run list --workflow "Governance Policy Baseline" --limit 1
-```
-
-Each run may open a pull request when it detects drift (new AVM module versions,
-policy changes, deprecated services). Review and merge those PRs as they appear —
-they are never auto-merged.
-
----
-
-## Project Structure
-
-Once you are working in your repo, here is what lives where:
+## Repo layout
 
 ```text
-.github/
-  agents/              # Agent definitions (*.agent.md)
-    _subagents/        # Subagent definitions (non-user-invocable)
-  skills/              # Reusable domain knowledge (SKILL.md per skill)
-  instructions/        # File-type rules with glob-based auto-application
-  copilot-instructions.md  # VS Code Copilot-specific orchestration instructions
-  workflows/           # GitHub Actions (sync, CI, validation)
-agent-output/          # Generated artifacts organized by project
-  {project}/           # 01-requirements.md through 07-*.md
-infra/
-  bicep/{project}/     # Bicep templates (main.bicep + modules/)
-  terraform/{project}/ # Terraform configurations (main.tf + modules/)
-tools/
-  mcp-servers/         # MCP servers (azure-pricing, drawio)
-  scripts/             # Validation and maintenance scripts
-site/                  # Documentation site source (Astro Starlight)
+agent-output/university/   # APEX artifacts, challenger reviews and workflow state
+infra/bicep/university/    # Bicep produced by APEX step 5
+.github/                   # APEX agents, skills, instructions (upstream-managed)
+tools/                     # APEX scripts and MCP servers (upstream-managed)
 ```
 
-### What's Yours vs. What's Upstream
+## Setup
 
-| Your files (safe to edit, never overwritten by sync) | Upstream-managed files (overwritten by sync) |
-| ---------------------------------------------------- | -------------------------------------------- |
-| `agent-output/` — generated project artifacts        | `.github/agents/` — agent definitions        |
-| `infra/bicep/` — your Bicep templates                | `.github/skills/` — agent skills             |
-| `.github/workflows/` — your CI/CD workflows          | `.github/instructions/` — coding rules       |
-| `README.md` — your documentation                     | `.github/copilot-instructions.md`            |
-|                                                      | `tools/`, `site/`, `package.json`            |
-|                                                      | `AGENTS.md`, `.devcontainer/`, `.vscode/`    |
+You need VS Code, GitHub Copilot, Docker Desktop (or Codespaces) and access to the hackathon build tenant.
 
-> **Note**: If you disable the sync workflow, everything becomes yours to edit freely.
-> See [Customization](#customization) below.
+1. Open the repo in the dev container (**Dev Containers: Reopen in Container**).
+2. Initialize once, then commit the result:
 
----
-
-## Customization
-
-### Changing defaults (regions, tags, naming)
-
-When you create from this template, **every file is yours**. The question is which
-approach gives you the best experience over time.
-
-**Strategy A: Edit directly** (simplest)
-
-Edit the file you need — for example, change `swedencentral` to `westeurope` in
-`.github/skills/apex-azure-defaults/SKILL.md`. If you don't plan to pull upstream
-improvements, disable the sync workflow entirely (repo Settings → Actions → disable
-**Upstream Sync**) and manage the repo as your own.
-
-If you want upstream updates later, re-enable the workflow. The sync PR will overwrite
-your edited files with the upstream version (it is not a merge), so you'll need to
-re-apply your changes after merging. Keep a record of what you changed.
-
-**Strategy B: Keep sync enabled, layer your overrides** (recommended for teams that
-want continuous upstream improvements)
-
-The sync workflow overwrites all upstream-managed files but never touches the four
-excluded paths. To safely store overrides that survive sync:
-
-1. **Edit the sync exclusion list** — the sync workflow file itself is user-owned
-   (`.github/workflows/` is excluded from sync). Open
-  `.github/workflows/weekly-upstream-sync.yml` and add paths to `EXCLUDE_PATHS`.
-  The mirror and preservation check both consume this list:
-
-   ```yaml
-   EXCLUDE_PATHS: |
-     .github/workflows/
-     agent-output/
-     infra/bicep/
-     infra/terraform/
-     README.md
-     AGENTS.md
+   ```bash
+   npm install
+   npm run init
+   npm run sync:workflows
    ```
 
-   Then add your overrides to root `AGENTS.md` — it will survive all future syncs.
+3. Sign in with `az login` and run `npm run setup` if you want the governance baseline workflow. Otherwise
+   APEX's Governance step (3.5) discovers policy from your signed-in subscription.
 
-2. **Use project-local guidance** — place organization defaults in
-  `infra/bicep/{project}/AGENTS.md` or `infra/terraform/{project}/AGENTS.md`.
-  Project folders are preserved. The shared track-level `AGENTS.md` files are
-  upstream-owned exceptions so security and workflow corrections reach both tracks.
-  To own a shared file instead, remove its entry from `SYNC_EXCEPTIONS`.
+See the [APEX docs](https://apexops.pro/) for the full setup and the
+[prompt guide](https://apexops.pro/guides/prompt-guide/) for running each step.
 
-3. **VS Code user-profile instructions** — place a `.instructions.md` file in your
-   VS Code profile's `prompts/` folder. This lives outside the repo entirely and
-   applies to all your workspaces.
+## Running the workflow
 
-**Which strategy to pick?**
+1. Select the **02-Requirements** agent (Step 1) and paste the whole of `archetype/BRIEF.md`. Answer every
+   SKU question with the brief's pinned values, and confirm the existing vended spoke for networking.
+2. Continue through Steps 2–5, passing every human gate and challenger review.
+3. Commit, then hand the repo URL and commit SHA to the hackathon kit's B09 owner for packaging.
 
-| Approach                          | Best for                                        |
-| --------------------------------- | ----------------------------------------------- |
-| **A: Edit directly, skip sync**   | Solo users, teams that self-manage updates      |
-| **B: Layer overrides, keep sync** | Teams that want automatic upstream improvements |
+Don't run APEX Deploy (step 6) here. Deployment is validated from the kit's `archetype/` copy.
 
-### Adding new agents or skills
+## Staying in sync with APEX
 
-Agents are defined in `.github/agents/*.agent.md` and skills in
-`.github/skills/*/SKILL.md`. You can add new ones alongside the existing set.
-If you keep sync enabled, add your custom paths to `EXCLUDE_PATHS`.
-Distinctive names alone do not protect files: the mirror removes upstream-absent paths.
-
-### Previewing upstream updates
-
-Manual **Upstream Sync** runs default to `dry_run=true`: they mirror into the runner,
-validate contracts, and summarize changes without pushing or changing pull requests.
-Set `upstream_ref` to an existing upstream feature branch to preview unmerged changes.
-Non-`main` branches cannot publish.
-
-Scheduled runs use upstream `main`. A manual `main` run can set `dry_run=false`
-to propose a sync PR. Every run records the exact upstream commit; review remains manual.
-The stabilization and publication checks run before publishing. These checks are not
-native agent acceptance or permission to deploy Azure resources.
-
-Private governance baselines, project outputs, generated infrastructure, repository
-workflows, local logs and scratch remain preserved. AVM indexes, the module cache and deprecation
-data are seeded only when absent, then owned by consumer maintenance. The public governance
-fixture and shared track-level guidance continue to follow upstream via `SYNC_EXCEPTIONS`.
-
-### Consumer Automation
-
-The accelerator distributes governance, IaC and weekly maintenance workflows from APEX's
-`.github/consumer-workflows/` templates. Operational jobs are disabled in APEX, this accelerator
-and template repositories. Repositories created from this template run IaC checks and maintenance
-automatically when Actions is enabled. Governance additionally requires
-`GOVERNANCE_BASELINE_ENABLED=true`, a Management Group ID and configured Azure OIDC credentials.
-
-Preview template updates with `npm run sync:workflows -- --dry-run`, then apply a reviewed
-commit using `npm run sync:workflows -- --apply --ref <commit-sha>`.
-Modified workflows block the update; retired files are reported for review, never deleted automatically.
-The updater provenance is preserved by content sync. See
-[consumer workflow ownership](tools/scripts/consumer-workflows.md).
-
----
-
-## IaC Tracks: Bicep and Terraform
-
-Both IaC tracks are fully supported. The Requirements agent (Step 1) captures your
-`iac_tool` preference, and the Orchestrator routes Steps 4-6 to the correct track.
-
-| Factor          | Bicep                           | Terraform                                |
-| --------------- | ------------------------------- | ---------------------------------------- |
-| **Azure-only**  | Native DSL, first-class support | Multi-cloud via AzureRM provider         |
-| **State**       | No state file (ARM-managed)     | State file (Azure Storage backend)       |
-| **AVM modules** | `br/public:avm/res/`            | `registry.terraform.io/Azure/avm-res-*/` |
-| **CI/CD**       | `az deployment group create`    | `terraform plan` + `terraform apply`     |
-
----
-
-## Multi-Project Support
-
-The accelerator is designed for **one repo containing multiple projects**. Each project
-gets its own folders:
-
-- `agent-output/{project}/` — artifacts (requirements, architecture, plans, docs)
-- `infra/bicep/{project}/` or `infra/terraform/{project}/` — IaC templates
-
-Agents, skills, instructions, and the dev container are shared across all projects.
-
-**One repo per project** is also valid when teams need separate governance or isolation.
-Each repo is created independently from the template.
-
-### Sharing customizations across repos or teams
-
-- **Edit the sync exclusion list** in each repo to protect `AGENTS.md`, then maintain a
-  standard overrides section that you copy into each repo
-- **VS Code user-profile instructions** — personal preferences that follow you across
-  repos without any per-repo setup
-- **Canonical overrides in a shared location** — maintain a standard overrides snippet
-  in a team wiki or internal repo and copy it when creating new instances
-
----
-
-## Keeping Up to Date
-
-| What                                        | How                                          | Frequency      |
-| ------------------------------------------- | -------------------------------------------- | -------------- |
-| Agents, skills, instructions, docs, scripts | Automated weekly PR (upstream sync workflow) | Weekly         |
-| GitHub Actions workflows                    | `npm run sync:workflows` (manual)            | As needed      |
-| All validations                             | `npm run validate:all`                       | Before each PR |
-
-The sync workflow opens a PR for human review — it never auto-merges. You can disable
-it entirely if you prefer to manage updates manually.
-
----
-
-## Validation & Quality
+`README.md`, `agent-output/`, `infra/bicep/` and `.github/workflows/` are yours and survive the weekly
+upstream sync. Everything else follows [APEX](https://github.com/jonathan-vella/apex). Before re-packaging the
+archetype after a sync, re-run the affected steps and record the new commit in the kit's `versions.md`.
 
 ```bash
-# Run all code and documentation validations
 npm run validate:all
-
-# Fix markdown formatting
-npm run lint:md:fix
-
-# Bicep validation (replace {project})
-bicep build infra/bicep/{project}/main.bicep
-bicep lint infra/bicep/{project}/main.bicep
-
-# Terraform validation
-terraform fmt -check -recursive infra/terraform/
-cd infra/terraform/{project} && terraform init -backend=false && terraform validate
+bicep lint infra/bicep/university/main.bicep
 ```
-
----
-
-## Resources
-
-- [APEX upstream project](https://github.com/jonathan-vella/apex)
-- [APEX documentation](https://apexops.pro/)
-- [Azure Setup guide](https://apexops.pro/getting-started/azure-setup/)
-- [MicroHack (hands-on exercises)](https://microhack.apexops.pro/)
-- [Prompt Guide](https://apexops.pro/guides/prompt-guide/)
-- [FAQ](https://apexops.pro/reference/faq/)
 
 ## License
 
