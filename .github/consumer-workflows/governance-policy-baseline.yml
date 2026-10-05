@@ -33,7 +33,7 @@ permissions:
 
 jobs:
   collect-baseline:
-    if: github.repository != 'jonathan-vella/apex' && github.repository != 'jonathan-vella/apex-factory-coe' && github.repository != 'jonathan-vella/apex-docs' && github.event.repository.is_template != true && vars.GOVERNANCE_BASELINE_ENABLED == 'true'
+    if: github.repository != 'jonathan-vella/apex' && github.repository != 'jonathan-vella/apex-accelerator' && github.repository != 'jonathan-vella/apex-docs' && github.event.repository.is_template != true && vars.GOVERNANCE_BASELINE_ENABLED == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Check governance configuration
