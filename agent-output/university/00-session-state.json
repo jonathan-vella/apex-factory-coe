@@ -4,7 +4,7 @@
   "iac_tool": "",
   "region": "swedencentral",
   "branch": "main",
-  "updated": "2026-10-06T10:37:33Z",
+  "updated": "2026-10-06T10:40:30Z",
   "current_step": 3,
   "decisions": {
     "region": "swedencentral",
@@ -133,6 +133,12 @@
       "timestamp": "2026-10-06T08:46:16Z",
       "rationale": "Final aggregated gate answer; architecture + cost-feasibility reviews APPROVED and hash-current (02 sha b0d49164..., 03 sha 0971f805...)",
       "step": "2"
+    },
+    {
+      "decision": "Select Governance replacement review for completion",
+      "rationale": "Owner-authorized confirmation review (pass 4) on refreshed live discovery; supersedes earlier governance passes whose inputs changed; 0 must_fix, 2 should_fix deferred to Step 4 with evidence in the decisions log; review=challenge-findings-governance-constraints-pass4.json; pass=4; sha256=9d378cb3b5ca89b1ddf08536a45787ee0485766d499995c595b1346f638f5611",
+      "step": "3_5",
+      "timestamp": "2026-10-06T10:40:23Z"
     }
   ],
   "review_audit": {
@@ -223,10 +229,10 @@
     "3_5": {
       "name": "Governance",
       "agent": "04g-Governance",
-      "status": "in_progress",
-      "sub_step": "phase_2_5_challenger",
+      "status": "complete",
+      "sub_step": "phase_3_gate",
       "started": "2026-10-06T08:46:16Z",
-      "completed": null,
+      "completed": "2026-10-06T10:40:23Z",
       "artifacts": [],
       "context_files_used": []
     },
@@ -269,6 +275,17 @@
       "completed": null,
       "artifacts": [],
       "context_files_used": []
+    }
+  },
+  "review_selections": {
+    "3_5": {
+      "schema_version": "review-selection-v1",
+      "path": "agent-output/university/challenge-findings-governance-constraints-pass4.json",
+      "sha256": "9d378cb3b5ca89b1ddf08536a45787ee0485766d499995c595b1346f638f5611",
+      "pass_number": 4,
+      "review_focus": "governance-reconciliation",
+      "input_coverage": "primary-and-review-guidance",
+      "selected_at": "2026-10-06T10:40:23Z"
     }
   }
 }

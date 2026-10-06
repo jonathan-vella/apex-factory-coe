@@ -33,7 +33,7 @@
 ## ✅ Workflow Progress
 
 ```text
-[██████░░░░░░░░░░░░░░] 29% Complete (2 of 7 required steps; optional Design skipped)
+[██████████░░░░░░░░░░] 43% Complete (3 of 7 required steps; optional Design skipped)
 ```
 
 | Step | Phase          |                                    Status                                     | Artifact                                                           |
@@ -41,7 +41,7 @@
 |  1   | Requirements   |     ![Done](https://img.shields.io/badge/-Done-success?style=flat-square)     | [01-requirements.md](./01-requirements.md)                         |
 |  2   | Architecture   |     ![Done](https://img.shields.io/badge/-Done-success?style=flat-square)     | [02-architecture-assessment.md](./02-architecture-assessment.md) · [03-des-cost-estimate.md](./03-des-cost-estimate.md) — approved 2026-10-06 |
 |  3   | Design         |   ![Skip](https://img.shields.io/badge/-Skipped-blue?style=flat-square)   | Skipped by owner (As-Built covers diagrams) |
-| 3.5  | Governance     | ![Pending](https://img.shields.io/badge/-Pending-lightgrey?style=flat-square) | [04-governance-constraints.md](./04-governance-constraints.md)     |
+| 3.5  | Governance     |     ![Done](https://img.shields.io/badge/-Done-success?style=flat-square)     | [04-governance-constraints.md](./04-governance-constraints.md) · [04-governance-constraints.json](./04-governance-constraints.json) — approved 2026-10-06 |
 |  4   | Planning       | ![Pending](https://img.shields.io/badge/-Pending-lightgrey?style=flat-square) | [04-implementation-plan.md](./04-implementation-plan.md)           |
 |  5   | Implementation | ![Pending](https://img.shields.io/badge/-Pending-lightgrey?style=flat-square) | [05-implementation-reference.md](./05-implementation-reference.md) |
 |  6   | Deployment     | ![Pending](https://img.shields.io/badge/-Pending-lightgrey?style=flat-square) | [06-deployment-summary.md](./06-deployment-summary.md)             |

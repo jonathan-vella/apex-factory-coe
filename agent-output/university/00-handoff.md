@@ -22,11 +22,11 @@
 - status: complete
 
 ## Context for Next Step
-- next-owner: 05-IaC Planner (after owner approval of Step 3.5)
-- gate: owner approval pending the location evidence below
+- next-owner: 05-IaC Planner
+- gate: Step 3.5 approved by the owner on 2026-10-06 with both should_fix findings deferred to Step 4
 - step 4: plan DINE rows as discovered assignments with remediation unverified; keep the post-deploy DNS (capability 15) and diagnostics readiness gates; owner states B08 grants the DINE identities their roles
 - deferred 6dec76b5: the 3 filtered Defender for Cloud assignments were checked (11 policies, all DeployIfNotExists, none Deny): verified non-blocking; the Defender for SQL managed instances DINE applies to the archetype SQL MI as configuration, not a block
-- deferred 1d29a697: both ALZ-lite location effects (Audit) were verified by the owner with az policy assignment show at mg-factory-corp on 2026-10-06, not from discovery; discovery does not itemize Audit effects or allowed locations; cite that command as the Step 4 evidence; command output still pending in the decisions log
+- deferred 1d29a697: both ALZ-lite location effects are Audit with enforcement mode Default, verified by the owner with az policy assignment show at mg-factory-corp on 2026-10-06 (not from discovery; discovery does not itemize Audit effects or allowed locations); the output is recorded in the decisions log; cite that command as the Step 4 evidence
 
 ## Skill Context
 - .github/skills/apex-azure-governance-discovery/SKILL.md

@@ -93,7 +93,7 @@
       "severity": "should_fix",
       "title": "Audit location effects are presented as live discovery despite owner-only confirmation",
       "action": "defer",
-      "note": "Defer to Step 4; no artifact edit, so pass 4 stays valid. The owner states both ALZ-lite location effects (Audit) were verified live on 2026-10-06 with az policy assignment show at mg-factory-corp (assignments alzl-allowed-locations and alzl-location-match-rg), not from discovery. Discovery does not itemize Audit effects or allowed locations; no allow-list is claimed. Step 4 cites that command as the evidence. EVIDENCE PENDING: the command output is not yet in this log. 04g-Governance did not run it because az policy reads are outside its deterministic-discovery scope; the owner supplies sanitized output (display name, enforcement mode, effect; no IDs).",
+      "note": "Defer to Step 4; no artifact edit, so pass 4 stays valid. Both ALZ-lite location effects (Audit) were verified live on 2026-10-06 with the owner's az policy assignment show at mg-factory-corp, not from discovery. Evidence supplied by the owner: {\"displayName\":\"ALZ-lite: Allowed locations\",\"effect\":\"Audit\",\"enforcementMode\":\"Default\"} and {\"displayName\":\"ALZ-lite: Audit resource location matches resource group location\",\"effect\":\"Audit\",\"enforcementMode\":\"Default\"}. 04-governance-constraints.md already says Audit for both (owner-confirmed). Discovery does not itemize Audit effects or allowed locations; no allow-list is claimed. Step 4 cites that command as the evidence. Evidence is owner-run output; 04g-Governance did not run it (az policy reads are outside its deterministic-discovery scope).",
       "decided_at": "2026-10-06T10:37:07Z"
     },
     {
