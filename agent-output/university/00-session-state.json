@@ -4,7 +4,7 @@
   "iac_tool": "",
   "region": "swedencentral",
   "branch": "main",
-  "updated": "2026-10-06T10:40:30Z",
+  "updated": "2026-10-06T13:29:22Z",
   "current_step": 3,
   "decisions": {
     "region": "swedencentral",
@@ -38,11 +38,13 @@
     "vnet_plan_decision": "confirmed",
     "budget_cap_known": "true",
     "cost_feasibility_review": "run",
-    "skip_design": "true",
+    "skip_design": "false",
     "required_rg_tags": "none enforced by policy; Step 1 convention (APEX fallback tags; sla=best-effort, backup-policy=platform-default, maint-window=system-default) on the archetype RG and every resource it creates; vended resources never retagged",
     "allowed_locations": "Audit, not a blocker (refreshed discovery); only blocking location rule is the tenant-root Deny on West Europe; allow-list contents not itemized or claimed; swedencentral and germanywestcentral both deployable",
     "rg_resource_same_region": "true (project requirement backed by the live Audit assignment ALZ-lite Audit resource location matches resource group location; not a blocker)",
-    "discovery_signature": "sha256:83028bbfa145f5cac61c573c827c5e2e6f8a24cb85394c261fdfc4f6c6d3c341"
+    "discovery_signature": "sha256:83028bbfa145f5cac61c573c827c5e2e6f8a24cb85394c261fdfc4f6c6d3c341",
+    "design_scope": "both",
+    "diagram_tool": "python"
   },
   "open_findings": [
     "must_fix|accept|dffe7aab|ACR trusted-services bypass is not an exception to the public-access Deny|Owner-reconciled mitigation: keep publicNetworkAccess Disabled and networkRuleBypassOptions AzureServices; record the by",
@@ -71,7 +73,13 @@
     "Governance review pass 2 (10-Challenger): 44e9df0f accepted by owner and applied (DINE/Modify rows described as discovered, remediation unverified); tenant root MG scope replaced with Tenant Root Group in the Markdown",
     "Governance review pass 3 (10-Challenger): 37a54ccd, cdc3bcbd, 77e9969e, ff8baa69 accepted by owner; live discovery refreshed (28 assignments, Allowed locations now Audit, new location-match Audit assignment); edits applied, pass 4 pending",
     "Governance review pass 4 (10-Challenger): 0 must_fix, 2 should_fix open (1d29a697 Audit effects owner-confirmed not discovered; 6dec76b5 filtered Defender assignments unverified); gate status READY_FOR_PLANNING; owner disposition pending",
-    "Step 3.5 gate: pass 4 should_fix 1d29a697 and 6dec76b5 deferred to Step 4; Defender auto-assignments verified non-blocking (11 DINE policies, no Deny); location-effect evidence (az policy assignment show) pending from owner; Step 3.5 not completed"
+    "Step 3.5 gate: pass 4 should_fix 1d29a697 and 6dec76b5 deferred to Step 4; Defender auto-assignments verified non-blocking (11 DINE policies, no Deny); location-effect evidence (az policy assignment show) pending from owner; Step 3.5 not completed",
+    "Step 3 completion (transition 3->4 on 2026-10-06) relied on script-generated design-adr findings, not a review; those files were deleted. Real pass-1 reviews: 0 must_fix, 17 should_fix, 8 suggestions across ADR-0001..0008 (challenge-findings-design-adr-000N.json). Step 3 completion and 00-handoff 'review complete' claim are invalid until the owner resolves ADR findings. Also: 04-governance-constraints.json and .preview.md contain subscription IDs (committed e97527a), contrary to the no-identifiers rule.",
+    "Step 3 reopened 2026-10-06 (skip_design=false). ADR pass-1 reviews were real: 0 must_fix, 17 should_fix, 8 suggestions; 24 accepted and applied, 06e6a398 rejected by owner (subscription_id allowed in 04-governance-constraints.json; governance preview.md deleted). Pass-2 confirmation: 0 must_fix; open should_fix 8cd52069 (ADR-0001 Reliability arrow vs unevaluated AKS) and 81c020c3 (ADR-0002 Performance arrow vs Not assessed); suggestion 3ea4e2b0 (ADR-0004 Learn quote not independently verified by the worker). ADR-0003 pass-2 review NOT completed: challenger-review-subagent failed twice (stale cache_inputs.checklists_sha, then write-boundary refusal); retry allowance exhausted, human 10-Challenger handoff required. Step 3 not complete; Step 4 not started. Supersedes the earlier entry claiming completion.",
+    "2026-10-06: applied 8cd52069 (ADR-0001 Reliability) and 81c020c3 (ADR-0002 Performance) as Not assessed. ADR-0001 and ADR-0002 pass-2 evidence is stale; ADR-0003 has no pass-2 evidence. Owner will run 10-Challenger; Step 3 not complete, Step 4 not started. Owner: subscription-ID exception covers all of 04-governance-constraints.json including resource paths. ADR-0008 keeps about 20 minutes with its Learn citation.",
+    "Step 3 pass-2 confirmation (10-Challenger, 2026-10-06): ADR-0002 APPROVED (c8b14550, 4d410452, 9f126c79, 81c020c3 closed; 06e6a398 owner-rejected). ADR-0003 APPROVED (fb748405, 0f634f1f closed) on the one retry after a worker draft recorded ADR-0002's hash. ADR-0001 NEEDS_REVISION: should_fix 3c8478ec retained (Performance still neutral arrow vs unevaluated AKS; set to Not assessed); 8cd52069 closed. 0 must_fix across all 8 ADRs. Correction returned to 04-Design; Step 3 not completed by 10-Challenger.",
+    "2026-10-06: 3c8478ec fixed, not deferred (ADR-0001 Performance set to Not assessed). Corrects the earlier note that the pass-2 reviews stay valid: ADR-0001's pass-2 file is now stale; owner will run 10-Challenger. Step 3 stays complete; Step 4 untouched.",
+    "Step 3 pass-3 confirmation (10-Challenger, 2026-10-06) on ADR-0001: APPROVED, 0 must_fix, 0 should_fix, 0 suggestions. 3c8478ec closed (Performance Not assessed); c231ee68, b243f912, 3ef9a403, 8cd52069 also confirmed closed. challenge-findings-design-adr-0001-pass3.json is current; supersedes the stale ADR-0001 pass-2 file."
   ],
   "decision_log": [
     {
@@ -139,6 +147,72 @@
       "rationale": "Owner-authorized confirmation review (pass 4) on refreshed live discovery; supersedes earlier governance passes whose inputs changed; 0 must_fix, 2 should_fix deferred to Step 4 with evidence in the decisions log; review=challenge-findings-governance-constraints-pass4.json; pass=4; sha256=9d378cb3b5ca89b1ddf08536a45787ee0485766d499995c595b1346f638f5611",
       "step": "3_5",
       "timestamp": "2026-10-06T10:40:23Z"
+    },
+    {
+      "decision": "ADR-0001 Linux App Service for the web tier; AKS is a future archetype",
+      "timestamp": "2026-10-06T12:32:19Z",
+      "rationale": "Standard complexity, no AKS design or price in Steps 1-2",
+      "step": "3"
+    },
+    {
+      "decision": "ADR-0002 SQL MI General Purpose rather than Azure SQL Database for the MI-link migration",
+      "timestamp": "2026-10-06T12:32:19Z",
+      "rationale": "Capability 5; MI link from vm-app01 via hub firewall is owner-stated (B07/B08)",
+      "step": "3"
+    },
+    {
+      "decision": "ADR-0003 Premium Service Bus and ACR because private endpoints require them",
+      "timestamp": "2026-10-06T12:32:20Z",
+      "rationale": "Only compliant tiers; 51% of workload cost is Service Bus Premium",
+      "step": "3"
+    },
+    {
+      "decision": "ADR-0004 ACR trusted-services bypass (AzureServices) for az acr import",
+      "timestamp": "2026-10-06T12:32:20Z",
+      "rationale": "Registry-level persistent exception, owner-accepted, gated by post-deploy import test",
+      "step": "3"
+    },
+    {
+      "decision": "ADR-0005 Azure Hybrid Benefit on by default for SQL MI",
+      "timestamp": "2026-10-06T12:32:20Z",
+      "rationale": "488.92 vs 780.82 per month at 730 h; licence-included is the fallback",
+      "step": "3"
+    },
+    {
+      "decision": "ADR-0006 Cost monitoring inherited from vending",
+      "timestamp": "2026-10-06T12:32:20Z",
+      "rationale": "Deferred exception expires 2027-01-03; no anomaly or health alert, accepted",
+      "step": "3"
+    },
+    {
+      "decision": "ADR-0007 No zone redundancy on web app or SQL MI; region from the hub",
+      "timestamp": "2026-10-06T12:32:20Z",
+      "rationale": "Training/demo, best-effort; redeploy from IaC",
+      "step": "3"
+    },
+    {
+      "decision": "ADR-0008 Native SQL MI start/stop schedule",
+      "timestamp": "2026-10-06T12:32:20Z",
+      "rationale": "Only after C7; MI link and zone redundancy block stop (Learn)",
+      "step": "3"
+    },
+    {
+      "decision": "Subscription-ID exception covers all of 04-governance-constraints.json including resource paths",
+      "timestamp": "2026-10-06T12:37:18Z",
+      "rationale": "Owner instruction 2026-10-06; supersedes the narrower subscription_id-only reading",
+      "step": "3"
+    },
+    {
+      "decision": "Step 3 Design approved by owner; 0 must_fix across all 8 ADRs (current pass-2 reviews). 3c8478ec (ADR-0001 Performance arrow) deferred: AKS performance comparison out of scope; AKS is an unevaluated future archetype",
+      "timestamp": "2026-10-06T13:17:10Z",
+      "rationale": "Owner approval 2026-10-06; no ADR edit after pass-2 so reviews stay valid",
+      "step": "3"
+    },
+    {
+      "decision": "ADR-0001 Performance impact set to Not assessed; 3c8478ec accepted (owner changed defer to fix)",
+      "timestamp": "2026-10-06T13:22:31Z",
+      "rationale": "Owner change 2026-10-06. Supersedes the deferral entry. ADR-0001 pass-2 review is stale against the edited ADR and needs a fresh 10-Challenger review; Step 3 stays complete",
+      "step": "3"
     }
   ],
   "review_audit": {
@@ -219,10 +293,10 @@
     "3": {
       "name": "Design",
       "agent": "04-Design",
-      "status": "pending",
+      "status": "complete",
       "sub_step": null,
-      "started": null,
-      "completed": null,
+      "started": "2026-10-06T12:04:58Z",
+      "completed": "2026-10-06T13:17:10Z",
       "artifacts": [],
       "context_files_used": []
     },
@@ -239,9 +313,9 @@
     "4": {
       "name": "IaC Plan",
       "agent": "",
-      "status": "pending",
+      "status": "in_progress",
       "sub_step": null,
-      "started": null,
+      "started": "2026-10-06T10:49:22Z",
       "completed": null,
       "artifacts": [],
       "context_files_used": []
