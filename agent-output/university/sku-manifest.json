@@ -38,7 +38,8 @@
         "sql-managed-instance",
         "storage-account",
         "service-bus"
-      ]
+      ],
+      "commit_sha": "4309ccf"
     }
   ],
   "services": [

@@ -4,7 +4,7 @@
   "iac_tool": "",
   "region": "swedencentral",
   "branch": "main",
-  "updated": "2026-10-06T08:46:16Z",
+  "updated": "2026-10-06T10:37:33Z",
   "current_step": 3,
   "decisions": {
     "region": "swedencentral",
@@ -38,7 +38,11 @@
     "vnet_plan_decision": "confirmed",
     "budget_cap_known": "true",
     "cost_feasibility_review": "run",
-    "skip_design": "true"
+    "skip_design": "true",
+    "required_rg_tags": "none enforced by policy; Step 1 convention (APEX fallback tags; sla=best-effort, backup-policy=platform-default, maint-window=system-default) on the archetype RG and every resource it creates; vended resources never retagged",
+    "allowed_locations": "Audit, not a blocker (refreshed discovery); only blocking location rule is the tenant-root Deny on West Europe; allow-list contents not itemized or claimed; swedencentral and germanywestcentral both deployable",
+    "rg_resource_same_region": "true (project requirement backed by the live Audit assignment ALZ-lite Audit resource location matches resource group location; not a blocker)",
+    "discovery_signature": "sha256:83028bbfa145f5cac61c573c827c5e2e6f8a24cb85394c261fdfc4f6c6d3c341"
   },
   "open_findings": [
     "must_fix|accept|dffe7aab|ACR trusted-services bypass is not an exception to the public-access Deny|Owner-reconciled mitigation: keep publicNetworkAccess Disabled and networkRuleBypassOptions AzureServices; record the by",
@@ -62,7 +66,12 @@
     "Step 2 pricing: SQL MI LicenseIncluded comparison unresolved - retail catalog (swedencentral) publishes no separate SQL licence meter for SQL MI; options worker FAILED twice (02-cost-estimate-sqlmi-options.json); retry allowance exhausted. AHB figures verified. Surface at approval gate.",
     "Step 2 pricing recovered after crash: 02-cost-estimate.json COMPLETE 1320.95/mo; shared-services COMPLETE 6.06/mo; sqlmi-schedule COMPLETE (AHB 261h 174.61 vs 730h 488.92); manifest writeback COMPLETE. Only 02-cost-estimate-sqlmi-options.json (LicenseIncluded) FAILED twice: run 1 no licence meter in swedencentral regional response; run 2 ARM MCP server not connected after crash (0 calls).",
     "should_fix|accept|856501fb|The private ACR image-pull path is not exercised end to end|Edit: post-deploy readiness check - import placeholder into ACR, switch web app to registry copy via UAMI AcrPull over VNet, restart, expect HTTP 200; no separate DNS check; leave app on registry copy; MCR startup test runs first",
-    "should_fix|accept|5c01d1e4|Private-endpoint diagnostics are not assigned or explicitly required|Edit: explicit diagnostic setting on each of 4 PEs, AllMetrics to log-management; no AllLogs (no PE log categories); no DINE-only path (ALZ-lite has no PE diagnostics policy); DNS policy-owned, PE diagnostics archetype-owned"
+    "should_fix|accept|5c01d1e4|Private-endpoint diagnostics are not assigned or explicitly required|Edit: explicit diagnostic setting on each of 4 PEs, AllMetrics to log-management; no AllLogs (no PE log categories); no DINE-only path (ALZ-lite has no PE diagnostics policy); DNS policy-owned, PE diagnostics archetype-owned",
+    "Governance review pass 1 (10-Challenger): 4fe41d89 and ddfde188 accepted by owner; edits applied to 04-governance-constraints.md",
+    "Governance review pass 2 (10-Challenger): 44e9df0f accepted by owner and applied (DINE/Modify rows described as discovered, remediation unverified); tenant root MG scope replaced with Tenant Root Group in the Markdown",
+    "Governance review pass 3 (10-Challenger): 37a54ccd, cdc3bcbd, 77e9969e, ff8baa69 accepted by owner; live discovery refreshed (28 assignments, Allowed locations now Audit, new location-match Audit assignment); edits applied, pass 4 pending",
+    "Governance review pass 4 (10-Challenger): 0 must_fix, 2 should_fix open (1d29a697 Audit effects owner-confirmed not discovered; 6dec76b5 filtered Defender assignments unverified); gate status READY_FOR_PLANNING; owner disposition pending",
+    "Step 3.5 gate: pass 4 should_fix 1d29a697 and 6dec76b5 deferred to Step 4; Defender auto-assignments verified non-blocking (11 DINE policies, no Deny); location-effect evidence (az policy assignment show) pending from owner; Step 3.5 not completed"
   ],
   "decision_log": [
     {
@@ -148,7 +157,7 @@
     "step_3_5": {
       "complexity": "",
       "passes_planned": 0,
-      "passes_executed": 0,
+      "passes_executed": 4,
       "skipped": [],
       "skip_reasons": [],
       "models_used": []
@@ -215,7 +224,7 @@
       "name": "Governance",
       "agent": "04g-Governance",
       "status": "in_progress",
-      "sub_step": null,
+      "sub_step": "phase_2_5_challenger",
       "started": "2026-10-06T08:46:16Z",
       "completed": null,
       "artifacts": [],
