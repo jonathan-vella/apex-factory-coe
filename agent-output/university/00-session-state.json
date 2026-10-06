@@ -4,8 +4,8 @@
   "iac_tool": "",
   "region": "swedencentral",
   "branch": "main",
-  "updated": "2026-10-05T15:51:45Z",
-  "current_step": 1,
+  "updated": "2026-10-06T08:46:16Z",
+  "current_step": 3,
   "decisions": {
     "region": "swedencentral",
     "compliance": "none (training/demo; ALZ-lite deny policies binding)",
@@ -23,12 +23,22 @@
     "sla_rto_rpo": "best-effort; redeploy from IaC",
     "end_user_auth": "out-of-scope (B06/B10)",
     "sku_commitment": "on-demand",
-    "sku_manifest_status": "draft",
-    "sku_manifest_revision": "1",
+    "sku_manifest_status": "reviewed",
+    "sku_manifest_revision": "2",
     "approved_regions": "[\"swedencentral\",\"germanywestcentral\"]",
     "sql_mi_license_type": "BasePrice",
     "cost_monitoring_exception": "{\"rationale\":\"Inherited from landing zone: vending (B08) creates subscription budget budget-factory-workload with 80% e-mail alert; archetype creates no budget or Action Group. Review with SKU manifest expiry or sooner if B08 vending budget changes or event date is set.\",\"expiry_date\":\"2027-01-03\"}",
-    "sql_mi_schedule": "{\"time_zone\":\"W. Europe Standard Time\",\"start\":\"Mon-Fri 07:30\",\"stop\":\"Mon-Fri 18:30\",\"enabled\":true}"
+    "sql_mi_schedule": "{\"time_zone\":\"W. Europe Standard Time\",\"start\":\"Mon-Fri 07:30\",\"stop\":\"Mon-Fri 18:30\",\"enabled\":true}",
+    "sku_confirmation_status": "approved",
+    "vnet_planning_mode": "guided",
+    "vnet_mode": "use-existing",
+    "existing_vnet_id": "discovered at deploy time: rg-spoke/vnet-spoke in the workload subscription",
+    "vnet_address_space": "10.20.1.0/24",
+    "subnet_plan": "[{\"name\":\"snet-app\",\"address_prefix\":\"10.20.1.0/26\",\"purpose\":\"app-service-integration\",\"delegation\":\"Microsoft.Web/serverFarms\",\"nsg\":\"none (accepted LZ design, B08)\",\"route_table\":\"rt-app\",\"service_endpoints\":[],\"private_endpoint_network_policies\":\"Disabled\"},{\"name\":\"snet-pe\",\"address_prefix\":\"10.20.1.64/26\",\"purpose\":\"private-endpoint\",\"delegation\":\"none\",\"nsg\":\"none (accepted LZ design, B08)\",\"route_table\":\"rt-pe\",\"service_endpoints\":[],\"private_endpoint_network_policies\":\"Disabled\"},{\"name\":\"snet-sqlmi\",\"address_prefix\":\"10.20.1.128/26\",\"purpose\":\"custom\",\"nsg\":\"nsg-sqlmi\",\"route_table\":\"rt-sqlmi\",\"service_endpoints\":[],\"private_endpoint_network_policies\":\"Disabled\"}]",
+    "vnet_plan_decision": "confirmed",
+    "budget_cap_known": "true",
+    "cost_feasibility_review": "run",
+    "skip_design": "true"
   },
   "open_findings": [
     "must_fix|accept|dffe7aab|ACR trusted-services bypass is not an exception to the public-access Deny|Owner-reconciled mitigation: keep publicNetworkAccess Disabled and networkRuleBypassOptions AzureServices; record the by",
@@ -47,7 +57,12 @@
     "must_fix|accept|92875fd7|Image-pull route not explicitly enabled|Added outboundVnetRouting.imagePullTraffic=true + verification",
     "should_fix|accept|ed95ae4f|SQL MI schedule lacks window/time zone|W. Europe Standard Time Mon-Fri 07:30-18:30, params, enabled",
     "must_fix|accept|fdd1172c|Budget preflight lacks budget-read authorization|Added budget read to deployer prerequisites; fail closed",
-    "should_fix|defer|f42fd8e0|Deferred cost-monitoring exception not in governance state|Carried to handoff for Step 3.5"
+    "should_fix|defer|f42fd8e0|Deferred cost-monitoring exception not in governance state|Carried to handoff for Step 3.5",
+    "BLOCKED Step 2 phase_3_cost: cost-estimate-subagent FAILED x3 (0 MCP calls) - azure-resource-manager-mcp server tools (get_retail_prices) not loaded in session; capability missing, not transient. FAILED stubs: 02-cost-estimate.json, 02-cost-estimate-sqlmi-options.json, 02-cost-estimate-shared-services.json (re-run needs overwrite:true). SKU confirmation approved and manifest rev 2 written; resume at committed pricing.",
+    "Step 2 pricing: SQL MI LicenseIncluded comparison unresolved - retail catalog (swedencentral) publishes no separate SQL licence meter for SQL MI; options worker FAILED twice (02-cost-estimate-sqlmi-options.json); retry allowance exhausted. AHB figures verified. Surface at approval gate.",
+    "Step 2 pricing recovered after crash: 02-cost-estimate.json COMPLETE 1320.95/mo; shared-services COMPLETE 6.06/mo; sqlmi-schedule COMPLETE (AHB 261h 174.61 vs 730h 488.92); manifest writeback COMPLETE. Only 02-cost-estimate-sqlmi-options.json (LicenseIncluded) FAILED twice: run 1 no licence meter in swedencentral regional response; run 2 ARM MCP server not connected after crash (0 calls).",
+    "should_fix|accept|856501fb|The private ACR image-pull path is not exercised end to end|Edit: post-deploy readiness check - import placeholder into ACR, switch web app to registry copy via UAMI AcrPull over VNet, restart, expect HTTP 200; no separate DNS check; leave app on registry copy; MCR startup test runs first",
+    "should_fix|accept|5c01d1e4|Private-endpoint diagnostics are not assigned or explicitly required|Edit: explicit diagnostic setting on each of 4 PEs, AllMetrics to log-management; no AllLogs (no PE log categories); no DINE-only path (ALZ-lite has no PE diagnostics policy); DNS policy-owned, PE diagnostics archetype-owned"
   ],
   "decision_log": [
     {
@@ -61,6 +76,54 @@
       "timestamp": "2026-10-05T15:08:47Z",
       "rationale": "Owner flagged prior address as unsourced; no kit vending budget address exists in this workspace; Step 4 must ask if no human Owner exists at budget scope",
       "step": "1"
+    },
+    {
+      "decision": "Architect-derived: Key Vault Standard; 4 private endpoints (ACR, Blob, Service Bus, Key Vault) in snet-pe with central DINE DNS; App Insights workspace-based on log-management with DisableLocalAuth=true; SQL MI schedule via native Microsoft.Sql/managedInstances/startStopSchedules@2025-01-01 named default, one scheduleList entry per weekday Mon-Fri 07:30-18:30, timeZoneId parameter",
+      "timestamp": "2026-10-06T07:00:23Z",
+      "rationale": "Owner-approved at Phase 6a 2026-10-06; native schedule avoids Automation/Logic App; stable API versions only for every resource",
+      "step": "2"
+    },
+    {
+      "decision": "Existing vended spoke used as-is; no subnet/NSG/route-table create or modify. No NSG on snet-app/snet-pe is an accepted landing-zone decision (B08: hub firewall filters egress; only SQL MI requires an NSG)",
+      "timestamp": "2026-10-06T07:00:24Z",
+      "rationale": "Owner confirmation at Phase 6b; validated live via Resource Graph 2026-10-06",
+      "step": "2"
+    },
+    {
+      "decision": "Pricing basis: SQL MI 730 h/month headline (MI link blocks schedule pre-C7); post-cutover schedule savings as separate line; report per month and per hour (/730) vs B09 brief ~1.83 USD/h, flag >10% delta. Shared-services lines (App Insights 2 GB, afw-hub Standard 5 GB processed) shown outside workload total",
+      "timestamp": "2026-10-06T07:00:24Z",
+      "rationale": "Owner usage-assumption answers at Phase 6a 2026-10-06",
+      "step": "2"
+    },
+    {
+      "decision": "No environment identifiers (subscription/tenant IDs, even truncated) in any artifact; use 'the workload subscription' and 'the shared services subscription'",
+      "timestamp": "2026-10-06T07:00:24Z",
+      "rationale": "Public repo reused by every member; owner instruction 2026-10-06",
+      "step": "2"
+    },
+    {
+      "decision": "budget_cap=1.83 USD/hour soft (B09 brief envelope; 1335.90 USD/month at 730 h). Phase 9a Case B: priced workload 1320.95 USD/month = 1.8095 USD/hour, 1.1% under brief, within the 10% owner threshold",
+      "timestamp": "2026-10-06T07:41:43Z",
+      "rationale": "Owner-supplied soft budget from Step 1; worker-verified total 02-cost-estimate.json queried 2026-10-06",
+      "step": "2"
+    },
+    {
+      "decision": "Budget gate Case B: workload 1320.95 USD/month = 1.81 USD/hour (/730) vs brief soft ~1.83 USD/hour (1.1% under, <10% delta); proceed",
+      "timestamp": "2026-10-06T08:14:33Z",
+      "rationale": "Phase 9a after COMPLETE pricing 2026-10-06; 02-cost-estimate.json",
+      "step": "2"
+    },
+    {
+      "decision": "WAF scores: Security 8 (High), Reliability 4 (High), Performance 6 (Medium), Cost 7 (Medium), Operations 7 (Medium); composite 6.4. Primary pillar Security; best-effort reliability accepted",
+      "timestamp": "2026-10-06T08:20:18Z",
+      "rationale": "02-architecture-assessment.md 2026-10-06; evidence from Learn + live spoke validation",
+      "step": "2"
+    },
+    {
+      "decision": "Step 2 approved by owner (human gate) 2026-10-06; skip Step 3 Design (As-Built covers diagrams); proceed to Step 3.5 live governance discovery against the workload subscription; pre-staged 04-governance-constraints.* for cross-check only; carry deferred cost-monitoring exception (f42fd8e0)",
+      "timestamp": "2026-10-06T08:46:16Z",
+      "rationale": "Final aggregated gate answer; architecture + cost-feasibility reviews APPROVED and hash-current (02 sha b0d49164..., 03 sha 0971f805...)",
+      "step": "2"
     }
   ],
   "review_audit": {
@@ -73,12 +136,14 @@
       "models_used": []
     },
     "step_2": {
-      "complexity": "",
-      "passes_planned": 0,
-      "passes_executed": 0,
+      "complexity": "standard",
+      "passes_planned": 2,
+      "passes_executed": 4,
       "skipped": [],
       "skip_reasons": [],
-      "models_used": []
+      "models_used": [
+        "GPT-6 Luna (copilot)"
+      ]
     },
     "step_3_5": {
       "complexity": "",
@@ -129,10 +194,10 @@
     "2": {
       "name": "Architecture",
       "agent": "03-Architect",
-      "status": "pending",
+      "status": "complete",
       "sub_step": null,
       "started": null,
-      "completed": null,
+      "completed": "2026-10-06T08:46:16Z",
       "artifacts": [],
       "context_files_used": []
     },
@@ -149,9 +214,9 @@
     "3_5": {
       "name": "Governance",
       "agent": "04g-Governance",
-      "status": "pending",
+      "status": "in_progress",
       "sub_step": null,
-      "started": null,
+      "started": "2026-10-06T08:46:16Z",
       "completed": null,
       "artifacts": [],
       "context_files_used": []

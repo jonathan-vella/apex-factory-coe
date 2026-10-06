@@ -4,8 +4,8 @@
   "project": "university",
   "default_region": "swedencentral",
   "created_at": "2026-10-05T15:00:00Z",
-  "updated_at": "2026-10-05T15:00:00Z",
-  "current_revision": 1,
+  "updated_at": "2026-10-06T07:10:00Z",
+  "current_revision": 2,
   "environments": [
     "dev"
   ],
@@ -17,6 +17,21 @@
       "step": "1",
       "apex_recall_checkpoint": "university:1:phase_5_artifact",
       "summary": "User pins from the B09 archetype brief for every service class; on-demand only, single dev environment, no zones; approved regions swedencentral + germanywestcentral.",
+      "changed_ids": [
+        "app-service-plan",
+        "container-registry",
+        "sql-managed-instance",
+        "storage-account",
+        "service-bus"
+      ]
+    },
+    {
+      "rev": 2,
+      "created_at": "2026-10-06T07:10:00Z",
+      "agent": "03-Architect",
+      "step": "2",
+      "apex_recall_checkpoint": "university:2:phase_2.5_compacted",
+      "summary": "Step 2 review of user pins: all five pins kept unchanged (no candidate sets; every class pinned). Verified P0v3 regional VNet integration and regional offer of every SKU in swedencentral and germanywestcentral. Added architect-computed sla_achieved. Single-region deployment in the hub region; the second approved region is an alternate, not a second deployment. Prices written back by cost-estimate-subagent.",
       "changed_ids": [
         "app-service-plan",
         "container-registry",
@@ -52,10 +67,13 @@
         "vnet-integration",
         "managed-identity"
       ],
-      "notes": "Linux, container. Brief requires verifying P0v3 supports regional VNet integration; if not, use the smallest Premium v3 tier that does and record a deviation. Region derived from hub at deploy time. Approved regions: swedencentral (primary), germanywestcentral (owner-approved, same SKU; availability and pricing to be checked at Step 2).",
+      "notes": "Linux, container. Brief requires verifying P0v3 supports regional VNet integration; if not, use the smallest Premium v3 tier that does and record a deviation. Region derived from hub at deploy time. Approved regions: swedencentral (primary), germanywestcentral (owner-approved, same SKU; availability and pricing to be checked at Step 2). Step 2: P0v3 verified for regional VNet integration (Basic and above) and offered for Linux in both approved regions; no deviation. Regions are approved alternates, one deployment in the hub region.",
+      "sla_achieved": "No availability commitment claimed: best-effort target; single instance, no zone redundancy, single region.",
       "source": "user-pin",
       "source_step": "1",
-      "last_modified_rev": 1
+      "last_modified_rev": 2,
+      "cost_estimate_monthly_usd": 64.97,
+      "cost_estimated_at": "2026-10-06T07:20:25.721Z"
     },
     {
       "id": "container-registry",
@@ -82,10 +100,13 @@
         "private-endpoints",
         "managed-identity"
       ],
-      "notes": "No zones pinned; platform zone redundancy accepted per kit convention. Admin user off, public access off, trusted-services bypass for az acr import. Approved regions: swedencentral (primary), germanywestcentral (owner-approved, same SKU; availability and pricing to be checked at Step 2).",
+      "notes": "No zones pinned; platform zone redundancy accepted per kit convention. Admin user off, public access off, trusted-services bypass for az acr import. Approved regions: swedencentral (primary), germanywestcentral (owner-approved, same SKU; availability and pricing to be checked at Step 2). Step 2: offered in both approved regions; zone redundancy is automatic in AZ regions at no extra cost (zoneRedundancy property no longer controls behaviour). Regions are approved alternates, one deployment in the hub region.",
+      "sla_achieved": "No availability commitment claimed: best-effort target; platform zone redundancy applies automatically, single region.",
       "source": "user-pin",
       "source_step": "1",
-      "last_modified_rev": 1
+      "last_modified_rev": 2,
+      "cost_estimate_monthly_usd": 50.69,
+      "cost_estimated_at": "2026-10-06T07:20:25.721Z"
     },
     {
       "id": "sql-managed-instance",
@@ -111,10 +132,13 @@
       "requires": [
         "managed-identity"
       ],
-      "notes": "General Purpose, Standard-series (Gen5), 4 vCores, 64 GB storage. licenseType BasePrice (AHB), requestedBackupStorageRedundancy Local, SQLServer2022 format, Entra-only. Approved regions: swedencentral (primary), germanywestcentral (owner-approved, same SKU; availability and pricing to be checked at Step 2).",
+      "notes": "General Purpose, Standard-series (Gen5), 4 vCores, 64 GB storage. licenseType BasePrice (AHB), requestedBackupStorageRedundancy Local, SQLServer2022 format, Entra-only. Approved regions: swedencentral (primary), germanywestcentral (owner-approved, same SKU; availability and pricing to be checked at Step 2). Step 2: GP_Gen5 4 vCores Available in both approved regions (capabilities API). Native startStopSchedules@2025-01-01 Mon-Fri 07:30-18:30; ineffective while an MI link is active (before C7). Regions are approved alternates, one deployment in the hub region.",
+      "sla_achieved": "No availability commitment claimed: best-effort target; General Purpose single instance, no zone redundancy, Local backup redundancy; unavailable while stopped by schedule after C7.",
       "source": "user-pin",
       "source_step": "1",
-      "last_modified_rev": 1
+      "last_modified_rev": 2,
+      "cost_estimate_monthly_usd": 497.68,
+      "cost_estimated_at": "2026-10-06T07:20:25.721Z"
     },
     {
       "id": "storage-account",
@@ -140,10 +164,13 @@
       "requires": [
         "private-endpoints"
       ],
-      "notes": "StorageV2 (general-purpose v2), LRS. Shared key access off. Approved regions: swedencentral (primary), germanywestcentral (owner-approved, same SKU; availability and pricing to be checked at Step 2).",
+      "notes": "StorageV2 (general-purpose v2), LRS. Shared key access off. Approved regions: swedencentral (primary), germanywestcentral (owner-approved, same SKU; availability and pricing to be checked at Step 2). Step 2: Hot access tier; LRS keeps data in one region (EU residency). Regions are approved alternates, one deployment in the hub region.",
+      "sla_achieved": "No availability commitment claimed: best-effort target; LRS, single region.",
       "source": "user-pin",
       "source_step": "1",
-      "last_modified_rev": 1
+      "last_modified_rev": 2,
+      "cost_estimate_monthly_usd": 1.08,
+      "cost_estimated_at": "2026-10-06T07:20:25.721Z"
     },
     {
       "id": "service-bus",
@@ -170,10 +197,13 @@
         "private-endpoints",
         "managed-identity"
       ],
-      "notes": "1 messaging unit. No zones pinned; platform zone redundancy accepted. Local (SAS) auth off. Approved regions: swedencentral (primary), germanywestcentral (owner-approved, same SKU; availability and pricing to be checked at Step 2).",
+      "notes": "1 messaging unit. No zones pinned; platform zone redundancy accepted. Local (SAS) auth off. Approved regions: swedencentral (primary), germanywestcentral (owner-approved, same SKU; availability and pricing to be checked at Step 2). Step 2: offered in both approved regions; Premium applies zone redundancy in AZ regions. Regions are approved alternates, one deployment in the hub region.",
+      "sla_achieved": "No availability commitment claimed: best-effort target; Premium 1 MU with platform zone redundancy, single region.",
       "source": "user-pin",
       "source_step": "1",
-      "last_modified_rev": 1
+      "last_modified_rev": 2,
+      "cost_estimate_monthly_usd": 677.08,
+      "cost_estimated_at": "2026-10-06T07:20:25.721Z"
     }
   ]
 }

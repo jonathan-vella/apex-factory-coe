@@ -15,7 +15,7 @@
 
 </details>
 
-> Rendered from `sku-manifest.json` (rev 1) by `tools/scripts/render-sku-manifest-md.mjs`.
+> Rendered from `sku-manifest.json` (rev 2) by `tools/scripts/render-sku-manifest-md.mjs`.
 >
 > **Do not hand-edit this file.** Mutate `sku-manifest.json` and re-run
 > the renderer (wired into lefthook + CI). Authoring rules:
@@ -28,8 +28,8 @@
 | Project          | `university`                                        |
 | Default region   | `swedencentral` (per-service `regions[]` inherits this) |
 | Schema version   | `sku-manifest-v1`                                          |
-| Current revision | `1`                               |
-| Last updated     | `2026-10-05T15:00:00Z`                                     |
+| Current revision | `2`                               |
+| Last updated     | `2026-10-06T07:10:00Z`                                     |
 | Environments     | `dev` (comma-separated)                              |
 | Service count    | `5`                                        |
 
@@ -53,11 +53,11 @@ vnet, subnet, NSG, route table, public IP, diagnostics. See
 
 | `id` | Service | Size (base) | Capacity | Zonal | Regions | SLA target / achieved | Commitment | Source | Rev |
 | ---- | ------- | ----------- | -------- | ----- | ------- | --------------------- | ---------- | ------ | --- |
-| `app-service-plan` | App Service Plan | `P0v3` | `fixed (default 1)` | ❌ | `swedencentral`, `germanywestcentral` | `best-effort (no target)` / `—` | `on-demand` | `user-pin` | `1` |
-| `container-registry` | Container Registry | `Premium` | `fixed (default 1)` | ❌ | `swedencentral`, `germanywestcentral` | `best-effort (no target)` / `—` | `on-demand` | `user-pin` | `1` |
-| `service-bus` | Service Bus Namespace | `Premium` | `fixed (default 1)` | ❌ | `swedencentral`, `germanywestcentral` | `best-effort (no target)` / `—` | `on-demand` | `user-pin` | `1` |
-| `sql-managed-instance` | SQL Managed Instance | `GP_Gen5` | `fixed (default 1)` | ❌ | `swedencentral`, `germanywestcentral` | `best-effort (no target)` / `—` | `on-demand` | `user-pin` | `1` |
-| `storage-account` | Storage Account | `Standard_LRS` | `fixed (default 1)` | ❌ | `swedencentral`, `germanywestcentral` | `best-effort (no target)` / `—` | `on-demand` | `user-pin` | `1` |
+| `app-service-plan` | App Service Plan | `P0v3` | `fixed (default 1)` | ❌ | `swedencentral`, `germanywestcentral` | `best-effort (no target)` / `No availability commitment claimed: best-effort target; single instance, no zone redundancy, single region.` | `on-demand` | `user-pin` | `2` |
+| `container-registry` | Container Registry | `Premium` | `fixed (default 1)` | ❌ | `swedencentral`, `germanywestcentral` | `best-effort (no target)` / `No availability commitment claimed: best-effort target; platform zone redundancy applies automatically, single region.` | `on-demand` | `user-pin` | `2` |
+| `service-bus` | Service Bus Namespace | `Premium` | `fixed (default 1)` | ❌ | `swedencentral`, `germanywestcentral` | `best-effort (no target)` / `No availability commitment claimed: best-effort target; Premium 1 MU with platform zone redundancy, single region.` | `on-demand` | `user-pin` | `2` |
+| `sql-managed-instance` | SQL Managed Instance | `GP_Gen5` | `fixed (default 1)` | ❌ | `swedencentral`, `germanywestcentral` | `best-effort (no target)` / `No availability commitment claimed: best-effort target; General Purpose single instance, no zone redundancy, Local backup redundancy; unavailable while stopped by schedule after C7.` | `on-demand` | `user-pin` | `2` |
+| `storage-account` | Storage Account | `Standard_LRS` | `fixed (default 1)` | ❌ | `swedencentral`, `germanywestcentral` | `best-effort (no target)` / `No availability commitment claimed: best-effort target; LRS, single region.` | `on-demand` | `user-pin` | `2` |
 
 ### Per-environment overrides
 
@@ -80,7 +80,11 @@ _No services declare environment overrides._
 
 | `id` | `cost_estimate_monthly_usd` | Confidence |
 | ---- | --------------------------- | ---------- |
-| _none priced yet_ | — | — |
+| `app-service-plan` | `$64.97` | `—` |
+| `container-registry` | `$50.69` | `—` |
+| `service-bus` | `$677.08` | `—` |
+| `sql-managed-instance` | `$497.68` | `—` |
+| `storage-account` | `$1.08` | `—` |
 
 ## Revision History
 
@@ -89,6 +93,7 @@ _No services declare environment overrides._
 | `rev` | Step | Agent | Created (UTC) | Summary | Changed `id`s | Commit | Checkpoint |
 | ----- | ---- | ----- | ------------- | ------- | ------------- | ------ | ---------- |
 | `1` | `1` | `02-Requirements` | `2026-10-05T15:00:00Z` | User pins from the B09 archetype brief for every service class; on-demand only, single dev environment, no zones; approved regions swedencentral + germanywestcentral. | `app-service-plan`, `container-registry`, `sql-managed-instance`, `storage-account`, `service-bus` | — | `university:1:phase_5_artifact` |
+| `2` | `2` | `03-Architect` | `2026-10-06T07:10:00Z` | Step 2 review of user pins: all five pins kept unchanged (no candidate sets; every class pinned). Verified P0v3 regional VNet integration and regional offer of every SKU in swedencentral and germanywestcentral. Added architect-computed sla_achieved. Single-region deployment in the hub region; the second approved region is an alternate, not a second deployment. Prices written back by cost-estimate-subagent. | `app-service-plan`, `container-registry`, `sql-managed-instance`, `storage-account`, `service-bus` | — | `university:2:phase_2.5_compacted` |
 
 ## Open Substitutions
 
