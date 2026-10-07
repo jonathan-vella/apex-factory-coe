@@ -1,6 +1,6 @@
-# university — Handoff (Step 5 complete)
+# university — Handoff (Step 4 reopened for revisions)
 
-Updated: 2026-10-07T08:20:00Z | IaC: Bicep | Next owner: 07b-Bicep Deploy (Step 6)
+Updated: 2026-10-07T12:35:00Z | IaC: Bicep | Next owner: 10-Challenger (plan confirmation), then 06b-Bicep CodeGen
 
 ## Completed Steps
 
@@ -8,8 +8,8 @@ Updated: 2026-10-07T08:20:00Z | IaC: Bicep | Next owner: 07b-Bicep Deploy (Step 
 - [x] Step 2 → agent-output/university/02-architecture-assessment.md
 - [x] Step 3 → agent-output/university/03-des-adr-0001…0008 (8 ADRs) and 03-des diagrams, approved 2026-10-06
 - [x] Step 3.5 → agent-output/university/04-governance-constraints.md
-- [x] Step 4 → agent-output/university/04-implementation-plan.md, APPROVED 2026-10-07 (sha256 `4a67a8d87b100466d025e155cdedb54c5926cef8ff85b9cda55699c1465ac226`)
-- [x] Step 5 → infra/bicep/university/, agent-output/university/04-preflight-check.md, 05-implementation-reference.md, 05-iac-handoff.json (validate-subagent APPROVED; nothing deployed)
+- [ ] Step 4 → reopened 2026-10-07: ACR ARM-audience tokens and SQL MI directory identity revisions; plan sha256 `11420ab35cd450e2cf19b0f898bd86584b916edd6a0b957e057360f49f6455df`, confirmation review pending
+- [x] Step 5 → infra/bicep/university/ (built from the earlier plan; must be updated for the Step 4 revisions)
 
 ## Key Decisions
 
@@ -19,12 +19,14 @@ Updated: 2026-10-07T08:20:00Z | IaC: Bicep | Next owner: 07b-Bicep Deploy (Step 
 - 10 AVM modules, all MCR-latest and frozen; raw Bicep: SQL MI and `startStopSchedules` `@2025-01-01`, diagnostic settings `@2016-09-01`
 - Stable APIs apply to archetype-declared resources; AVM-internal preview versions listed for B09 `versions.md`
 - Hooks: azd pre/postprovision in pwsh 7, `az` only, standalone `.ps1` reusable by `archetype/deploy.ps1`
-- SKU manifest rev 3 locked; plan_status APPROVED; 57f85f8d (deployer grant scope) is an owner-accepted risk
+- SKU manifest rev 3 locked; 57f85f8d (deployer grant scope) and 569fbf8e (shared `id-sqlmi-directory` attachable outside SQL MI) are owner-accepted risks
+- ACR `azureADAuthenticationAsArmPolicyStatus: 'enabled'` (UAMI pull); 3fd577cf deferred (policy 42781ec6 reports Audit or Disabled, never Deny)
+- SQL MI identity `SystemAssigned,UserAssigned`, primary = `id-sqlmi-directory` (derived by preflight, no new member input)
 - Subscription-ID exception covers all of `04-governance-constraints.json`; ADR-0008 keeps "about 20 minutes"
 
 ## Open Challenger Findings (must_fix only)
 
-- None. Plan passes 1–5: 0 must_fix. Completion selected `challenge-findings-plan-pass5.json` (confirmation, ecc6642f closed).
+- 569fbf8e in `challenge-findings-plan-pass7.json`: owner-accepted risk, recorded in Task 12 step 10. Completion needs a clean confirmation review of the current plan.
 
 ## Context for Next Step
 
@@ -37,6 +39,7 @@ Updated: 2026-10-07T08:20:00Z | IaC: Bicep | Next owner: 07b-Bicep Deploy (Step 
 - Budget warning: `budget-factory-workload` is 500; the 24×7 run rate is about $1,321/month, so `actual80` will fire.
 - Telemetry readiness stays pending the app image (B06/B10); local auth stays off.
 - Owner-stated, not in Step 1–3.5 artifacts: MI link `vm-app01` → hub firewall → `snet-sqlmi`, TCP 5022 and 11000–11999 (B07/B08).
+- B08 dependency (92079f7c, deferred): ALZ-lite creates `id-sqlmi-directory` and only teardown removes it; recovery is to re-run ALZ-lite, the grant script and vending. Verified 2026-10-07: it exists and the deployer can assign it.
 
 ## Skill Context
 
@@ -53,4 +56,4 @@ Updated: 2026-10-07T08:20:00Z | IaC: Bicep | Next owner: 07b-Bicep Deploy (Step 
 - agent-output/university/04-environment-manifest.json
 - agent-output/university/04-dependency-diagram.{py,png,svg} and 04-runtime-diagram.{py,png,svg}
 - agent-output/university/sku-manifest.{json,md} (rev 3, locked)
-- agent-output/university/challenge-findings-plan.json, -pass2 to -pass5, and challenge-findings-plan-decisions.json
+- agent-output/university/challenge-findings-plan.json, -pass2 to -pass7, and challenge-findings-plan-decisions.json
