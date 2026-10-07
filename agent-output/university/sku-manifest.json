@@ -54,7 +54,8 @@
         "sql-managed-instance",
         "storage-account",
         "service-bus"
-      ]
+      ],
+      "commit_sha": "5cc66af"
     }
   ],
   "services": [
