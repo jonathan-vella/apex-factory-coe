@@ -5,7 +5,7 @@
 <div align="center">
 
 ![Status](https://img.shields.io/badge/Status-In%20Progress-yellow?style=for-the-badge)
-![Step](https://img.shields.io/badge/Step-4%20of%207-blue?style=for-the-badge)
+![Step](https://img.shields.io/badge/Step-5%20of%207-blue?style=for-the-badge)
 
 # 🏗️ university
 
@@ -33,7 +33,7 @@
 ## ✅ Workflow Progress
 
 ```text
-[███████████░░░░░░░░░] 57% Complete (4 of 7 required steps, plus optional Design)
+[██████████████░░░░░░] 71% Complete (5 of 7 required steps, plus optional Design)
 ```
 
 | Step | Phase          |                                    Status                                     | Artifact                                                           |
@@ -43,7 +43,7 @@
 |  3   | Design         |     ![Done](https://img.shields.io/badge/-Done-success?style=flat-square)     | [03-des-diagram.png](./03-des-diagram.png) · [03-des-network-diagram.png](./03-des-network-diagram.png) · 8 ADRs (`03-des-adr-*.md`) — approved 2026-10-06 |
 | 3.5  | Governance     |     ![Done](https://img.shields.io/badge/-Done-success?style=flat-square)     | [04-governance-constraints.md](./04-governance-constraints.md) · [04-governance-constraints.json](./04-governance-constraints.json) — approved 2026-10-06 |
 |  4   | Planning       |     ![Done](https://img.shields.io/badge/-Done-success?style=flat-square)     | [04-implementation-plan.md](./04-implementation-plan.md) · [04-iac-contract.json](./04-iac-contract.json) — approved 2026-10-07 |
-|  5   | Implementation | ![Pending](https://img.shields.io/badge/-Pending-lightgrey?style=flat-square) | [05-implementation-reference.md](./05-implementation-reference.md) |
+|  5   | Implementation | ![Done](https://img.shields.io/badge/-Done-success?style=flat-square) | [05-implementation-reference.md](./05-implementation-reference.md) · [04-preflight-check.md](./04-preflight-check.md) · [05-iac-handoff.json](./05-iac-handoff.json) — code in [infra/bicep/university](../../infra/bicep/university/), not deployed |
 |  6   | Deployment     | ![Pending](https://img.shields.io/badge/-Pending-lightgrey?style=flat-square) | [06-deployment-summary.md](./06-deployment-summary.md)             |
 |  7   | Documentation  | ![Pending](https://img.shields.io/badge/-Pending-lightgrey?style=flat-square) | [07-documentation-index.md](./07-documentation-index.md)           |
 

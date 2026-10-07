@@ -1,6 +1,6 @@
-# university — Handoff (Step 4 complete)
+# university — Handoff (Step 5 complete)
 
-Updated: 2026-10-07T07:05:27Z | IaC: Bicep | Next owner: 06b-Bicep CodeGen (Step 5)
+Updated: 2026-10-07T08:20:00Z | IaC: Bicep | Next owner: 07b-Bicep Deploy (Step 6)
 
 ## Completed Steps
 
@@ -9,6 +9,7 @@ Updated: 2026-10-07T07:05:27Z | IaC: Bicep | Next owner: 06b-Bicep CodeGen (Step
 - [x] Step 3 → agent-output/university/03-des-adr-0001…0008 (8 ADRs) and 03-des diagrams, approved 2026-10-06
 - [x] Step 3.5 → agent-output/university/04-governance-constraints.md
 - [x] Step 4 → agent-output/university/04-implementation-plan.md, APPROVED 2026-10-07 (sha256 `4a67a8d87b100466d025e155cdedb54c5926cef8ff85b9cda55699c1465ac226`)
+- [x] Step 5 → infra/bicep/university/, agent-output/university/04-preflight-check.md, 05-implementation-reference.md, 05-iac-handoff.json (validate-subagent APPROVED; nothing deployed)
 
 ## Key Decisions
 
@@ -27,14 +28,15 @@ Updated: 2026-10-07T07:05:27Z | IaC: Bicep | Next owner: 06b-Bicep CodeGen (Step
 
 ## Context for Next Step
 
-- Generate only from `04-iac-contract.json` (35 resources), `04-policy-property-map.json` (19 Deny) and `04-environment-manifest.json` (zero-GUID placeholders).
-- Carry suggestion 5d241bcc: the archetype README states the Azure Hybrid Benefit assumption. ADR-0004 suggestion 3ea4e2b0 stays open.
+- Deploy from `05-iac-handoff.json` (tree hash recorded; recompute before deploying) and `04-environment-manifest.json`. Values come from the azd environment; no tenant or subscription IDs are in the tree.
+- `az deployment sub validate` and what-if against the `workload` subscription passed (exit 0); the what-if shows only the recorded zone and redundancy settings. Private endpoint diagnostics use `diagnosticSettings@2016-09-01`; validate and what-if accepted it, so the `2021-05-01-preview` fallback was not used.
+- Run the security scanner as `npm run validate:iac-security-baseline -- --public-web-app infra/bicep/university/modules/web-app.bicep`; without the flag the approved public web app is reported.
+- Preflight step 9 reads inherited policy assignments through the ARM `atScope()` filter, because `az policy assignment list` omitted the management-group ALZ-lite assignments in this tenant.
+- Azure Hybrid Benefit assumption and the opt-out are in `infra/bicep/university/README.md` (5d241bcc closed).
+- Owner-approved variance: Key Vault `tenantId` contract input is not wired (AVM 0.14.2 has no such parameter). Plan-heading warnings (`st-container`, `sbns-queue`, `sqlmi-schedule`) are left as cosmetic; the frozen plan and contract are unchanged.
 - Budget warning: `budget-factory-workload` is 500; the 24×7 run rate is about $1,321/month, so `actual80` will fire.
-- What-if: no zone or GRS properties beyond the recorded ones; if `2016-09-01` diagnostics are rejected, use the pre-approved `2021-05-01-preview` with `AllMetrics` and record it.
-- Preflight step 6 (cap. 18) checks `afwp-hub` `app-to-mcr`, `app-to-azure-monitor`, `app-to-entra-id` from `snet-app` on 443; fails closed "rerun vending (B08)".
 - Telemetry readiness stays pending the app image (B06/B10); local auth stays off.
 - Owner-stated, not in Step 1–3.5 artifacts: MI link `vm-app01` → hub firewall → `snet-sqlmi`, TCP 5022 and 11000–11999 (B07/B08).
-- Cosmetic consistency warnings: `st-container`, `sbns-queue`, `sqlmi-schedule` have no plan headings.
 
 ## Skill Context
 

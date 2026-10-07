@@ -4,7 +4,7 @@
   "iac_tool": "",
   "region": "swedencentral",
   "branch": "main",
-  "updated": "2026-10-07T07:05:27Z",
+  "updated": "2026-10-07T08:19:28Z",
   "current_step": 4,
   "decisions": {
     "region": "swedencentral",
@@ -95,7 +95,8 @@
     "suggestion|defer|5d241bcc|Planned CodeGen outputs omit the required Azure Hybrid Benefit README guidance|carried to Step 5 handoff",
     "should_fix|reject|57f85f8d|Deployer role-assignment rights are not constrained to the approved role set|accepted risk: member Owner on dedicated lab subscription (B08); fixed role set at resource scope",
     "should_fix|accept|b9e56ee6|Partial single-deployment failures have no recovery behavior|Edit: failure contract + leftover virtual-cluster preflight + MI cost note",
-    "should_fix|accept|eaecc85f|Entra telemetry authentication and delivery are not verified|Edit: option (b) telemetry readiness pending app image (B06/B10); 7 settings unchanged"
+    "should_fix|accept|eaecc85f|Entra telemetry authentication and delivery are not verified|Edit: option (b) telemetry readiness pending app image (B06/B10); 7 settings unchanged",
+    "Step 5 bicep-validate-subagent: NEEDS_REVISION, 1 HIGH: contract lists Key Vault tenantId input but pinned AVM key-vault 0.14.2 exposes none (sets subscription().tenantId). Plan-rooted; no handoff emitted pending owner decision (accept variance or Return to Step 4). Also open: cosmetic plan-heading warnings st-container, sbns-queue, sqlmi-schedule need an edit to frozen plan/contract."
   ],
   "decision_log": [
     {
@@ -283,6 +284,18 @@
       "rationale": "Owner-authorized single confirmation review (2026-10-07) limited to the ecc6642f change; pass 5 comprehensive, 0 findings; owner approved the Step 4 gate in chat 2026-10-07; review=challenge-findings-plan-pass5.json; pass=5; sha256=e223eb09d8687b4ccda066cb2385c1361908e304ffce49abd7ec42d683e196ca",
       "step": "4",
       "timestamp": "2026-10-07T07:05:27Z"
+    },
+    {
+      "decision": "Step 5 implementation choices: (1) PE diagnostics kept on diagnosticSettings@2016-09-01; validate and what-if accepted it, fallback 2021-05-01-preview not used. (2) Preflight step 9 reads inherited policy assignments via ARM atScope() filter because az policy assignment list omits MG-scope ALZ-lite assignments. (3) Public web app isolated in modules/web-app.bicep so validate:iac-security-baseline --public-web-app can scope the reviewed exception. (4) Key Vault tenantId not wired: pinned AVM 0.14.2 has no such param and sets tenant to subscription().tenantId.",
+      "timestamp": "2026-10-07T08:06:54Z",
+      "rationale": "Code-level adaptations within plan scope; (4) is a frozen-contract wording variance awaiting owner disposition",
+      "step": "5"
+    },
+    {
+      "decision": "Owner-approved variance (2026-10-07): Key Vault tenantId contract input is not wired. AVM key-vault 0.14.2 has no tenantId parameter and derives it from subscription().tenantId, which equals the deployment tenant; the tenantId input stays for the SQL MI Entra admin and the preflight signed-in-tenant check. Plan-heading warnings st-container, sbns-queue, sqlmi-schedule left as cosmetic; frozen plan and contract unchanged.",
+      "timestamp": "2026-10-07T08:10:21Z",
+      "rationale": "Owner answer to Step 5 questions; avoids editing the frozen plan hash",
+      "step": "5"
     }
   ],
   "review_audit": {
@@ -393,10 +406,10 @@
     "5": {
       "name": "IaC Code",
       "agent": "",
-      "status": "pending",
+      "status": "complete",
       "sub_step": null,
       "started": null,
-      "completed": null,
+      "completed": "2026-10-07T08:19:28Z",
       "artifacts": [],
       "context_files_used": []
     },
