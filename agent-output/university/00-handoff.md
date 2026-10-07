@@ -1,56 +1,54 @@
-# university — Step 3 design complete, Step 4 in progress
+# university — Handoff (Step 4 complete)
 
-## Status
-- Step 3 reopened 2026-10-06 (`skip_design=false`) and approved by the owner on 2026-10-06. Step 3 stays complete.
-- All 8 ADRs are approved with current reviews: 0 must_fix and 0 should_fix. The only open item is suggestion 3ea4e2b0 (ADR-0004).
-- Step 4 was already marked in progress and was not reset or touched.
-- Steps 2 and 3.5 are complete and unchanged.
+Updated: 2026-10-07T07:05:27Z | IaC: Bicep | Next owner: 06b-Bicep CodeGen (Step 5)
 
 ## Completed Steps
-- agent-output/university/01-requirements.md
-- agent-output/university/02-architecture-assessment.md
-- agent-output/university/03-des-diagram.py
-- agent-output/university/03-des-diagram.png
-- agent-output/university/03-des-diagram.svg
-- agent-output/university/03-des-network-diagram.py
-- agent-output/university/03-des-network-diagram.png
-- agent-output/university/03-des-network-diagram.svg
-- agent-output/university/03-des-adr-0001-linux-app-service-vs-aks.md
-- agent-output/university/03-des-adr-0002-sql-mi-general-purpose-vs-azure-sql-database.md
-- agent-output/university/03-des-adr-0003-service-bus-and-acr-premium-private-endpoints.md
-- agent-output/university/03-des-adr-0004-acr-trusted-services-bypass-for-import.md
-- agent-output/university/03-des-adr-0005-azure-hybrid-benefit-default-on.md
-- agent-output/university/03-des-adr-0006-inherited-cost-monitoring-from-vending.md
-- agent-output/university/03-des-adr-0007-no-zone-redundancy-region-derived-from-hub.md
-- agent-output/university/03-des-adr-0008-native-sql-mi-start-stop-schedule.md
-- agent-output/university/04-governance-constraints.md
-- agent-output/university/04-governance-constraints.json
 
-## Review Evidence
-Pass 1 (comprehensive, `challenger-review-subagent`), supporting inputs 01, 02 and 04-governance-constraints.md:
-- agent-output/university/challenge-findings-design-adr-0001.json to challenge-findings-design-adr-0008.json: 0 must_fix, 17 should_fix, 8 suggestions
-- Owner dispositions: challenge-findings-design-adr-000N-decisions.json. 24 accepted and applied; 06e6a398 rejected (subscription_id allowed in 04-governance-constraints.json; governance preview.md deleted)
+- [x] Step 1 → agent-output/university/01-requirements.md
+- [x] Step 2 → agent-output/university/02-architecture-assessment.md
+- [x] Step 3 → agent-output/university/03-des-adr-0001…0008 (8 ADRs) and 03-des diagrams, approved 2026-10-06
+- [x] Step 3.5 → agent-output/university/04-governance-constraints.md
+- [x] Step 4 → agent-output/university/04-implementation-plan.md, APPROVED 2026-10-07 (sha256 `4a67a8d87b100466d025e155cdedb54c5926cef8ff85b9cda55699c1465ac226`)
 
-Pass 2 (confirmation, comprehensive) and pass 3 (ADR-0001), all passing `validate-challenger-findings --verify-cache` against the current ADR bytes:
-- ADR-0002, ADR-0003: run by `10-Challenger`. Approved, 0 findings.
-- ADR-0004 to ADR-0008: pass 2, ADRs unchanged since. 0 must_fix, 0 should_fix; ADR-0004 has suggestion 3ea4e2b0 (Learn quote not verified by the worker).
-- ADR-0001: pass 2 found should_fix 3c8478ec (Performance arrow versus an unevaluated AKS design). The owner applied it (Performance set to Not assessed). `challenge-findings-design-adr-0001-pass3.json` (`10-Challenger`, comprehensive): APPROVED, 0 findings, 3c8478ec closed. It supersedes the stale `challenge-findings-design-adr-0001-pass2.json`, which is kept as history.
+## Key Decisions
 
-## Open Findings
-- 3ea4e2b0 (ADR-0004, suggestion): Learn quotation not independently verified by the worker.
-- Resolved: 3c8478ec (ADR-0001, should_fix), closed by `challenge-findings-design-adr-0001-pass3.json`; recorded as resolved in challenge-findings-design-adr-0001-decisions.json.
+- One subscription-scope deployment; inputs: tenant ID, subscription ID, suffix; region swedencentral (derived from hub)
+- deployment_strategy=single; identity_model=user-assigned-shared (`id-university-<suffix>`, web app only); public_edge_auth=none
+- script_runtime_image=not-applicable; az_posture=single-zone-mvp (forced values recorded: Service Bus `zoneRedundant`, ACR `zoneRedundancy`)
+- 10 AVM modules, all MCR-latest and frozen; raw Bicep: SQL MI and `startStopSchedules` `@2025-01-01`, diagnostic settings `@2016-09-01`
+- Stable APIs apply to archetype-declared resources; AVM-internal preview versions listed for B09 `versions.md`
+- Hooks: azd pre/postprovision in pwsh 7, `az` only, standalone `.ps1` reusable by `archetype/deploy.ps1`
+- SKU manifest rev 3 locked; plan_status APPROVED; 57f85f8d (deployer grant scope) is an owner-accepted risk
+- Subscription-ID exception covers all of `04-governance-constraints.json`; ADR-0008 keeps "about 20 minutes"
 
-## Next Step
-- next-owner: 05-IaC Planner (Step 4, already in progress)
-- carry: the ADR set and the open suggestion above; the owner-stated MI-link topology below
+## Open Challenger Findings (must_fix only)
 
-## Owner decisions
-- The subscription-ID exception covers all of `04-governance-constraints.json`, including its resource paths.
-- ADR-0008 keeps "about 20 minutes" with its Microsoft Learn citation.
+- None. Plan passes 1–5: 0 must_fix. Completion selected `challenge-findings-plan-pass5.json` (confirmation, ecc6642f closed).
 
-## Owner-stated facts not in Step 1-3.5 artifacts
-- MI link topology (B07/B08): `vm-app01` (SQL Server 2022, datacenter) through the hub firewall to `snet-sqlmi`, TCP 5022 and 11000-11999. Labelled owner-stated in ADR-0002 and the diagrams.
+## Context for Next Step
+
+- Generate only from `04-iac-contract.json` (35 resources), `04-policy-property-map.json` (19 Deny) and `04-environment-manifest.json` (zero-GUID placeholders).
+- Carry suggestion 5d241bcc: the archetype README states the Azure Hybrid Benefit assumption. ADR-0004 suggestion 3ea4e2b0 stays open.
+- Budget warning: `budget-factory-workload` is 500; the 24×7 run rate is about $1,321/month, so `actual80` will fire.
+- What-if: no zone or GRS properties beyond the recorded ones; if `2016-09-01` diagnostics are rejected, use the pre-approved `2021-05-01-preview` with `AllMetrics` and record it.
+- Preflight step 6 (cap. 18) checks `afwp-hub` `app-to-mcr`, `app-to-azure-monitor`, `app-to-entra-id` from `snet-app` on 443; fails closed "rerun vending (B08)".
+- Telemetry readiness stays pending the app image (B06/B10); local auth stays off.
+- Owner-stated, not in Step 1–3.5 artifacts: MI link `vm-app01` → hub firewall → `snet-sqlmi`, TCP 5022 and 11000–11999 (B07/B08).
+- Cosmetic consistency warnings: `st-container`, `sbns-queue`, `sqlmi-schedule` have no plan headings.
 
 ## Skill Context
-- .github/skills/apex-python-diagrams/SKILL.md
-- .github/skills/apex-azure-adr/SKILL.md
+
+- .github/skills/apex-azure-defaults/SKILL.md
+- .github/skills/apex-azure-bicep-patterns/SKILL.md
+- .github/skills/apex-iac-common/references/codegen-do-dont.md
+- Security baseline: TLS 1.2, HTTPS-only, managed identity, no keys or secrets; AVM-first
+
+## Artifacts
+
+- agent-output/university/04-implementation-plan.md
+- agent-output/university/04-iac-contract.json
+- agent-output/university/04-policy-property-map.json
+- agent-output/university/04-environment-manifest.json
+- agent-output/university/04-dependency-diagram.{py,png,svg} and 04-runtime-diagram.{py,png,svg}
+- agent-output/university/sku-manifest.{json,md} (rev 3, locked)
+- agent-output/university/challenge-findings-plan.json, -pass2 to -pass5, and challenge-findings-plan-decisions.json

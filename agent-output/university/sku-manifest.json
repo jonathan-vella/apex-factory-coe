@@ -4,8 +4,8 @@
   "project": "university",
   "default_region": "swedencentral",
   "created_at": "2026-10-05T15:00:00Z",
-  "updated_at": "2026-10-06T07:10:00Z",
-  "current_revision": 2,
+  "updated_at": "2026-10-06T14:50:00Z",
+  "current_revision": 3,
   "environments": [
     "dev"
   ],
@@ -40,6 +40,21 @@
         "service-bus"
       ],
       "commit_sha": "4309ccf"
+    },
+    {
+      "rev": 3,
+      "created_at": "2026-10-06T14:50:00Z",
+      "agent": "05-IaC Planner",
+      "step": "4",
+      "apex_recall_checkpoint": "university:4:phase_3_plan",
+      "summary": "Step 4 governance reconciliation: all five user pins kept unchanged; no discovered Deny or SKU allow-list constrains them. requires[] cross-check passes (P0v3 vnet-integration; ACR Premium, StorageV2, Service Bus Premium private-endpoints; managed-identity on all). IaC values set explicitly over AVM defaults: App Service plan skuCapacity 1, zoneRedundant false (AVM default 3/true); Storage skuName Standard_LRS (AVM default Standard_GRS); Service Bus skuObject Premium capacity 1 (AVM default 2); SQL MI zoneRedundant false (raw). AVM-forced zone redundancy accepted and recorded: container-registry 0.13.1 zoneRedundancy Enabled, service-bus 0.17.1 zoneRedundant true (platform-automatic in swedencentral).",
+      "changed_ids": [
+        "app-service-plan",
+        "container-registry",
+        "sql-managed-instance",
+        "storage-account",
+        "service-bus"
+      ]
     }
   ],
   "services": [
@@ -72,7 +87,7 @@
       "sla_achieved": "No availability commitment claimed: best-effort target; single instance, no zone redundancy, single region.",
       "source": "user-pin",
       "source_step": "1",
-      "last_modified_rev": 2,
+      "last_modified_rev": 3,
       "cost_estimate_monthly_usd": 64.97,
       "cost_estimated_at": "2026-10-06T07:20:25.721Z"
     },
@@ -105,7 +120,7 @@
       "sla_achieved": "No availability commitment claimed: best-effort target; platform zone redundancy applies automatically, single region.",
       "source": "user-pin",
       "source_step": "1",
-      "last_modified_rev": 2,
+      "last_modified_rev": 3,
       "cost_estimate_monthly_usd": 50.69,
       "cost_estimated_at": "2026-10-06T07:20:25.721Z"
     },
@@ -137,7 +152,7 @@
       "sla_achieved": "No availability commitment claimed: best-effort target; General Purpose single instance, no zone redundancy, Local backup redundancy; unavailable while stopped by schedule after C7.",
       "source": "user-pin",
       "source_step": "1",
-      "last_modified_rev": 2,
+      "last_modified_rev": 3,
       "cost_estimate_monthly_usd": 497.68,
       "cost_estimated_at": "2026-10-06T07:20:25.721Z"
     },
@@ -169,7 +184,7 @@
       "sla_achieved": "No availability commitment claimed: best-effort target; LRS, single region.",
       "source": "user-pin",
       "source_step": "1",
-      "last_modified_rev": 2,
+      "last_modified_rev": 3,
       "cost_estimate_monthly_usd": 1.08,
       "cost_estimated_at": "2026-10-06T07:20:25.721Z"
     },
@@ -202,7 +217,7 @@
       "sla_achieved": "No availability commitment claimed: best-effort target; Premium 1 MU with platform zone redundancy, single region.",
       "source": "user-pin",
       "source_step": "1",
-      "last_modified_rev": 2,
+      "last_modified_rev": 3,
       "cost_estimate_monthly_usd": 677.08,
       "cost_estimated_at": "2026-10-06T07:20:25.721Z"
     }

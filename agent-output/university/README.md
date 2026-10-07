@@ -5,7 +5,7 @@
 <div align="center">
 
 ![Status](https://img.shields.io/badge/Status-In%20Progress-yellow?style=for-the-badge)
-![Step](https://img.shields.io/badge/Step-3.5%20of%207-blue?style=for-the-badge)
+![Step](https://img.shields.io/badge/Step-4%20of%207-blue?style=for-the-badge)
 
 # 🏗️ university
 
@@ -22,27 +22,27 @@
 | Property           | Value                                                          |
 | ------------------ | -------------------------------------------------------------- |
 | **Created**        | 2026-10-05                                                     |
-| **Last Updated**   | 2026-10-06                                                     |
+| **Last Updated**   | 2026-10-07                                                     |
 | **Region**         | swedencentral (derived from hub; alternate germanywestcentral) |
 | **Environment**    | dev (training/demo)                                            |
 | **Estimated Cost** | $1,320.95/month (≈ $1.81/hour), Step 2 verified pricing        |
-| **AVM Coverage**   | Determined at Step 5                                           |
+| **AVM Coverage**   | 32 of 35 resources via 10 pinned AVM modules (raw: SQL MI, schedule, diagnostic settings) |
 
 ---
 
 ## ✅ Workflow Progress
 
 ```text
-[██████████░░░░░░░░░░] 43% Complete (3 of 7 required steps; optional Design skipped)
+[███████████░░░░░░░░░] 57% Complete (4 of 7 required steps, plus optional Design)
 ```
 
 | Step | Phase          |                                    Status                                     | Artifact                                                           |
 | :--: | -------------- | :---------------------------------------------------------------------------: | ------------------------------------------------------------------ |
 |  1   | Requirements   |     ![Done](https://img.shields.io/badge/-Done-success?style=flat-square)     | [01-requirements.md](./01-requirements.md)                         |
 |  2   | Architecture   |     ![Done](https://img.shields.io/badge/-Done-success?style=flat-square)     | [02-architecture-assessment.md](./02-architecture-assessment.md) · [03-des-cost-estimate.md](./03-des-cost-estimate.md) — approved 2026-10-06 |
-|  3   | Design         |   ![Skip](https://img.shields.io/badge/-Skipped-blue?style=flat-square)   | Skipped by owner (As-Built covers diagrams) |
+|  3   | Design         |     ![Done](https://img.shields.io/badge/-Done-success?style=flat-square)     | [03-des-diagram.png](./03-des-diagram.png) · [03-des-network-diagram.png](./03-des-network-diagram.png) · 8 ADRs (`03-des-adr-*.md`) — approved 2026-10-06 |
 | 3.5  | Governance     |     ![Done](https://img.shields.io/badge/-Done-success?style=flat-square)     | [04-governance-constraints.md](./04-governance-constraints.md) · [04-governance-constraints.json](./04-governance-constraints.json) — approved 2026-10-06 |
-|  4   | Planning       | ![Pending](https://img.shields.io/badge/-Pending-lightgrey?style=flat-square) | [04-implementation-plan.md](./04-implementation-plan.md)           |
+|  4   | Planning       |     ![Done](https://img.shields.io/badge/-Done-success?style=flat-square)     | [04-implementation-plan.md](./04-implementation-plan.md) · [04-iac-contract.json](./04-iac-contract.json) — approved 2026-10-07 |
 |  5   | Implementation | ![Pending](https://img.shields.io/badge/-Pending-lightgrey?style=flat-square) | [05-implementation-reference.md](./05-implementation-reference.md) |
 |  6   | Deployment     | ![Pending](https://img.shields.io/badge/-Pending-lightgrey?style=flat-square) | [06-deployment-summary.md](./06-deployment-summary.md)             |
 |  7   | Documentation  | ![Pending](https://img.shields.io/badge/-Pending-lightgrey?style=flat-square) | [07-documentation-index.md](./07-documentation-index.md)           |
@@ -57,7 +57,8 @@
 
 ## 🏛️ Architecture
 
-No diagram yet (produced at Step 3/4).
+- Design: [03-des-diagram.png](./03-des-diagram.png) · [03-des-network-diagram.png](./03-des-network-diagram.png)
+- Plan: [04-dependency-diagram.png](./04-dependency-diagram.png) · [04-runtime-diagram.png](./04-runtime-diagram.png)
 
 ### Key Resources
 
@@ -82,7 +83,7 @@ No diagram yet (produced at Step 3/4).
 | File                                       | Description                        |                               Status                               | Created    |
 | ------------------------------------------ | ---------------------------------- | :----------------------------------------------------------------: | ---------- |
 | [01-requirements.md](./01-requirements.md) | Project requirements with NFRs     | ![Done](https://img.shields.io/badge/-Done-success?style=flat-square) | 2026-10-05 |
-| [sku-manifest.json](./sku-manifest.json)   | SKU manifest rev 2 (pins verified, prices written back) | ![Done](https://img.shields.io/badge/-Done-success?style=flat-square) | 2026-10-06 |
+| [sku-manifest.json](./sku-manifest.json)   | SKU manifest rev 3 (Step 4 reconciled, locked) | ![Done](https://img.shields.io/badge/-Done-success?style=flat-square) | 2026-10-07 |
 | [sku-manifest.md](./sku-manifest.md)       | Rendered SKU manifest              | ![Done](https://img.shields.io/badge/-Done-success?style=flat-square) | 2026-10-05 |
 | [challenge-findings-requirements.json](./challenge-findings-requirements.json) | Step 1 challenger review | ![Done](https://img.shields.io/badge/-Done-success?style=flat-square) | 2026-10-05 |
 | [challenge-findings-requirements-decisions.json](./challenge-findings-requirements-decisions.json) | Per-finding decisions | ![Done](https://img.shields.io/badge/-Done-success?style=flat-square) | 2026-10-05 |
@@ -94,6 +95,20 @@ No diagram yet (produced at Step 3/4).
 | [challenge-findings-architecture.json](./challenge-findings-architecture.json) | Step 2 architecture review (APPROVED) | ![Done](https://img.shields.io/badge/-Done-success?style=flat-square) | 2026-10-06 |
 | [challenge-findings-cost-estimate.json](./challenge-findings-cost-estimate.json) | Step 2 cost-feasibility review (APPROVED) | ![Done](https://img.shields.io/badge/-Done-success?style=flat-square) | 2026-10-06 |
 | [challenge-findings-architecture-decisions.json](./challenge-findings-architecture-decisions.json) | Step 2 per-finding decisions | ![Done](https://img.shields.io/badge/-Done-success?style=flat-square) | 2026-10-06 |
+
+</details>
+
+<details open>
+<summary><strong>📁 Step 3.5-4: Governance & Implementation Plan</strong></summary>
+
+| File | Description | Status | Created |
+| ---- | ----------- | :----: | ------- |
+| [04-governance-constraints.md](./04-governance-constraints.md) · [04-governance-constraints.json](./04-governance-constraints.json) | Governance constraints (19 Deny) | ![Done](https://img.shields.io/badge/-Done-success?style=flat-square) | 2026-10-06 |
+| [04-implementation-plan.md](./04-implementation-plan.md) | Implementation plan (single deployment, 35 resources), approved | ![Done](https://img.shields.io/badge/-Done-success?style=flat-square) | 2026-10-07 |
+| [04-iac-contract.json](./04-iac-contract.json) · [04-policy-property-map.json](./04-policy-property-map.json) · [04-environment-manifest.json](./04-environment-manifest.json) | CodeGen contracts | ![Done](https://img.shields.io/badge/-Done-success?style=flat-square) | 2026-10-07 |
+| [04-dependency-diagram.png](./04-dependency-diagram.png) · [04-runtime-diagram.png](./04-runtime-diagram.png) | Plan diagrams (`.py` + `.png` + `.svg`) | ![Done](https://img.shields.io/badge/-Done-success?style=flat-square) | 2026-10-06 |
+| [challenge-findings-plan.json](./challenge-findings-plan.json) to [challenge-findings-plan-pass5.json](./challenge-findings-plan-pass5.json) | Step 4 reviews, passes 1–5 (0 must_fix) | ![Done](https://img.shields.io/badge/-Done-success?style=flat-square) | 2026-10-07 |
+| [challenge-findings-plan-decisions.json](./challenge-findings-plan-decisions.json) | Step 4 per-finding decisions | ![Done](https://img.shields.io/badge/-Done-success?style=flat-square) | 2026-10-07 |
 
 </details>
 
