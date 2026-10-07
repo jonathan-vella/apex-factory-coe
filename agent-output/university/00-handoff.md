@@ -1,6 +1,6 @@
-# university — Handoff (Step 4 complete, revised)
+# university — Handoff (Step 5 complete, updated for plan 5a4b96e4)
 
-Updated: 2026-10-07T13:25:00Z | IaC: Bicep | Next owner: 06b-Bicep CodeGen (Step 5 update)
+Updated: 2026-10-07T14:00:00Z | IaC: Bicep | Next owner: 07b-Bicep Deploy (Step 6)
 
 ## Completed Steps
 
@@ -9,7 +9,7 @@ Updated: 2026-10-07T13:25:00Z | IaC: Bicep | Next owner: 06b-Bicep CodeGen (Step
 - [x] Step 3 → agent-output/university/03-des-adr-0001…0008 (8 ADRs) and 03-des diagrams, approved 2026-10-06
 - [x] Step 3.5 → agent-output/university/04-governance-constraints.md
 - [x] Step 4 → agent-output/university/04-implementation-plan.md, revised and APPROVED 2026-10-07 (sha256 `5a4b96e45528e883d5cc870886e892efc0fb7d29c5b6f22c7b5aef7e63171a00`)
-- [ ] Step 5 → infra/bicep/university/ was built from plan `4a67a8d8`; update it for the Step 4 revisions
+- [x] Step 5 → infra/bicep/university/ updated for plan `5a4b96e4`; validate and what-if passed on `workload`; `05-iac-handoff.json` re-emitted (tree hash `dcbe5478`)
 
 ## Key Decisions
 
@@ -30,8 +30,8 @@ Updated: 2026-10-07T13:25:00Z | IaC: Bicep | Next owner: 06b-Bicep CodeGen (Step
 
 ## Context for Next Step
 
-- CodeGen delta (contract `plan_ref` = `5a4b96e4`): Task 4 ACR `azureADAuthenticationAsArmPolicyStatus: 'enabled'`; Task 13 step 5 pre-switch check; Task 1 param `sqlMiDirectoryIdentityId`; Task 9 SQL MI `SystemAssigned,UserAssigned` + `primaryUserAssignedIdentityId`; Task 11 `SQLMI_DIRECTORY_IDENTITY_ID`; Task 12 steps 9–11 (atScope query kept, new identity check, outputs). Rebuild `05-iac-handoff.json` after the code changes.
-- Earlier validate and what-if (before the revisions) passed; Private endpoint diagnostics `@2016-09-01` were accepted, so the `2021-05-01-preview` fallback was not used. No tenant or subscription IDs are in the tree.
+- Step 5 delta applied (contract `plan_ref` = `5a4b96e4`): ACR `azureADAuthenticationAsArmPolicyStatus: 'enabled'` with the post-deploy `authentication-as-arm` check; `sqlMiDirectoryIdentityId` param (`SQLMI_DIRECTORY_IDENTITY_ID`) feeding SQL MI `SystemAssigned,UserAssigned` and `primaryUserAssignedIdentityId`; preflight step 10 (identity exists, deployer can assign it) and the `atScope()` DINE query.
+- Validation (2026-10-07, `workload`, suffix of the existing deployment because `snet-sqlmi` already hosts that MI): preflight passed, `bicep build`/`lint` clean, validate and what-if `Succeeded` (no resource Delete), `bicep-validate-subagent` APPROVED (L2 20 of 20), security baseline and SKU coverage pass. A provision run without `CONTAINER_IMAGE` previews the web app back on the MCR placeholder; deploy from an azd environment that has the registry copy. No tenant or subscription IDs are in the tree.
 - Run the security scanner as `npm run validate:iac-security-baseline -- --public-web-app infra/bicep/university/modules/web-app.bicep`; without the flag the approved public web app is reported.
 - Preflight step 9 reads inherited policy assignments through the ARM `atScope()` filter, because `az policy assignment list` omitted the management-group ALZ-lite assignments in this tenant.
 - Azure Hybrid Benefit assumption and the opt-out are in `infra/bicep/university/README.md` (5d241bcc closed).
