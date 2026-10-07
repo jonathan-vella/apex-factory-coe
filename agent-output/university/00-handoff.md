@@ -1,6 +1,6 @@
-# university — Handoff (Step 4 reopened for revisions)
+# university — Handoff (Step 4 complete, revised)
 
-Updated: 2026-10-07T12:35:00Z | IaC: Bicep | Next owner: 10-Challenger (plan confirmation), then 06b-Bicep CodeGen
+Updated: 2026-10-07T13:25:00Z | IaC: Bicep | Next owner: 06b-Bicep CodeGen (Step 5 update)
 
 ## Completed Steps
 
@@ -8,8 +8,8 @@ Updated: 2026-10-07T12:35:00Z | IaC: Bicep | Next owner: 10-Challenger (plan con
 - [x] Step 2 → agent-output/university/02-architecture-assessment.md
 - [x] Step 3 → agent-output/university/03-des-adr-0001…0008 (8 ADRs) and 03-des diagrams, approved 2026-10-06
 - [x] Step 3.5 → agent-output/university/04-governance-constraints.md
-- [ ] Step 4 → reopened 2026-10-07: ACR ARM-audience tokens and SQL MI directory identity revisions; plan sha256 `11420ab35cd450e2cf19b0f898bd86584b916edd6a0b957e057360f49f6455df`, confirmation review pending
-- [x] Step 5 → infra/bicep/university/ (built from the earlier plan; must be updated for the Step 4 revisions)
+- [x] Step 4 → agent-output/university/04-implementation-plan.md, revised and APPROVED 2026-10-07 (sha256 `5a4b96e45528e883d5cc870886e892efc0fb7d29c5b6f22c7b5aef7e63171a00`)
+- [ ] Step 5 → infra/bicep/university/ was built from plan `4a67a8d8`; update it for the Step 4 revisions
 
 ## Key Decisions
 
@@ -26,12 +26,12 @@ Updated: 2026-10-07T12:35:00Z | IaC: Bicep | Next owner: 10-Challenger (plan con
 
 ## Open Challenger Findings (must_fix only)
 
-- 569fbf8e in `challenge-findings-plan-pass7.json`: owner-accepted risk, recorded in Task 12 step 10. Completion needs a clean confirmation review of the current plan.
+- None. Completion selected `challenge-findings-plan-pass3.json` (comprehensive confirmation of plan `5a4b96e4`, 0 findings); 569fbf8e is owner-accepted, 92079f7c deferred (B08), 2c0780f6 applied.
 
 ## Context for Next Step
 
-- Deploy from `05-iac-handoff.json` (tree hash recorded; recompute before deploying) and `04-environment-manifest.json`. Values come from the azd environment; no tenant or subscription IDs are in the tree.
-- `az deployment sub validate` and what-if against the `workload` subscription passed (exit 0); the what-if shows only the recorded zone and redundancy settings. Private endpoint diagnostics use `diagnosticSettings@2016-09-01`; validate and what-if accepted it, so the `2021-05-01-preview` fallback was not used.
+- CodeGen delta (contract `plan_ref` = `5a4b96e4`): Task 4 ACR `azureADAuthenticationAsArmPolicyStatus: 'enabled'`; Task 13 step 5 pre-switch check; Task 1 param `sqlMiDirectoryIdentityId`; Task 9 SQL MI `SystemAssigned,UserAssigned` + `primaryUserAssignedIdentityId`; Task 11 `SQLMI_DIRECTORY_IDENTITY_ID`; Task 12 steps 9–11 (atScope query kept, new identity check, outputs). Rebuild `05-iac-handoff.json` after the code changes.
+- Earlier validate and what-if (before the revisions) passed; Private endpoint diagnostics `@2016-09-01` were accepted, so the `2021-05-01-preview` fallback was not used. No tenant or subscription IDs are in the tree.
 - Run the security scanner as `npm run validate:iac-security-baseline -- --public-web-app infra/bicep/university/modules/web-app.bicep`; without the flag the approved public web app is reported.
 - Preflight step 9 reads inherited policy assignments through the ARM `atScope()` filter, because `az policy assignment list` omitted the management-group ALZ-lite assignments in this tenant.
 - Azure Hybrid Benefit assumption and the opt-out are in `infra/bicep/university/README.md` (5d241bcc closed).
@@ -56,4 +56,4 @@ Updated: 2026-10-07T12:35:00Z | IaC: Bicep | Next owner: 10-Challenger (plan con
 - agent-output/university/04-environment-manifest.json
 - agent-output/university/04-dependency-diagram.{py,png,svg} and 04-runtime-diagram.{py,png,svg}
 - agent-output/university/sku-manifest.{json,md} (rev 3, locked)
-- agent-output/university/challenge-findings-plan.json, -pass2 to -pass7, and challenge-findings-plan-decisions.json
+- agent-output/university/challenge-findings-plan.json, -pass2 to -pass7 (pass3 = selected confirmation), and challenge-findings-plan-decisions.json
