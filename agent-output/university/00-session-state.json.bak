@@ -4,7 +4,7 @@
   "iac_tool": "",
   "region": "swedencentral",
   "branch": "main",
-  "updated": "2026-10-09T16:16:45Z",
+  "updated": "2026-10-10T12:25:46Z",
   "current_step": 4,
   "decisions": {
     "region": "swedencentral",
@@ -53,7 +53,7 @@
     "zone_redundancy": "resolved: az_posture single-zone-mvp; ASP 1 instance zoneRedundant=false; SQL MI zoneRedundant=false; ACR/Service Bus platform zone redundancy forced by AVM and accepted",
     "public_edge_auth_rule": "resolved: App Service public HTTPS, public_edge_auth=none, client_cert_required=false, no Easy Auth, no IP restrictions",
     "accepted_risks": "{\"finding_id\":\"569fbf8e\",\"override_rationale\":\"id-sqlmi-directory holds only Microsoft Graph read (User.Read.All, GroupMember.Read.All, Application.Read.All); members are tenant users with default directory read, so attaching it elsewhere adds no meaningful exposure; members already hold Owner on dedicated, short-lived lab subscriptions. Owner decision 2026-10-07.\",\"step\":\"step-4\",\"requires_step\":\"step-4\"}",
-    "plan_status": "DRAFT"
+    "plan_status": "EXCEPTION_AUTHORIZED"
   },
   "open_findings": [
     "must_fix|accept|dffe7aab|ACR trusted-services bypass is not an exception to the public-access Deny|Owner-reconciled mitigation: keep publicNetworkAccess Disabled and networkRuleBypassOptions AzureServices; record the by",
@@ -346,6 +346,28 @@
       "timestamp": "2026-10-09T16:16:45Z",
       "rationale": "No restrictions, member-rights removal, Graph-grant changes or identity redesign authorized. Intended final teardown deletes the identity only after all SQL MI consumers are removed; rehearsal teardown retained it, and final deletion has not been evidenced. Tenant-owner approval, event-end date, named cleanup owner and consumer-removal/deletion verification remain outstanding. Existing APEX review lifecycle, gate-3 all-passes-APPROVED precondition and runtime completion check do not support a lab exception for a present must-fix. Record this owner decision only: no gates opened, no new override/closure, no review rerun, no approved plan, no Step 4 completion or CodeGen. Human route 01-Orchestrator for explicit APEX workflow/governance-owner authorization of a versioned scoped exception contract and legitimate enforcement semantics; no such contract change is authorized here.",
       "step": "4"
+    },
+    {
+      "decision": "Select Plan replacement review for completion",
+      "rationale": "Fresh independent confirmation pass10 with full supporting coverage under the merged lab risk-authorization framework; must-fix a749666a and bc629836 accepted via signed lab authorization university-kit-lab-risk-1; review=challenge-findings-plan-pass10.json; pass=10; sha256=f78b1970c02027d37fa8acc2eed88e03f62a6427f938f7e2debcd9dc03e7b5e5",
+      "step": "4",
+      "timestamp": "2026-10-10T12:25:46Z"
+    },
+    {
+      "id": "D043",
+      "step": 4,
+      "agent": "apex-recall",
+      "title": "Explicit lab risk authorization",
+      "choice": "EXCEPTION_AUTHORIZED",
+      "rationale": "Verified external authority and separate human approval; findings remain unresolved",
+      "decision": "Risk gate exception-authorized; findings remain unresolved",
+      "action": "plan-complete",
+      "authorization": {
+        "path": "agent-output/university/risk/risk-authorization.json",
+        "sha256": "1439357210aa08dd24b2d2cd151a2ea0a800f8bdada46ec433828995868914fa",
+        "id": "university-kit-lab-risk-1"
+      },
+      "timestamp": "2026-10-10T12:25:46Z"
     }
   ],
   "review_audit": {
@@ -446,10 +468,10 @@
     "4": {
       "name": "IaC Plan",
       "agent": "",
-      "status": "in_progress",
-      "sub_step": "phase_4_challenger",
+      "status": "complete",
+      "sub_step": null,
       "started": "2026-10-09T13:51:23Z",
-      "completed": null,
+      "completed": "2026-10-10T12:25:46Z",
       "artifacts": [
         "agent-output/university/04-implementation-plan.md",
         "agent-output/university/challenge-findings-plan-pass8.json",
@@ -500,12 +522,12 @@
     },
     "4": {
       "schema_version": "review-selection-v1",
-      "path": "agent-output/university/challenge-findings-plan-pass3.json",
-      "sha256": "a4bf264eff8c07072bf8c8fff5fac11d00084830c5a7e2535b308de226a3a2ea",
-      "pass_number": 3,
+      "path": "agent-output/university/challenge-findings-plan-pass10.json",
+      "sha256": "f78b1970c02027d37fa8acc2eed88e03f62a6427f938f7e2debcd9dc03e7b5e5",
+      "pass_number": 10,
       "review_focus": "comprehensive",
       "input_coverage": "primary-and-review-guidance",
-      "selected_at": "2026-10-07T13:20:43Z"
+      "selected_at": "2026-10-10T12:25:46Z"
     }
   },
   "review_attempts": [
@@ -729,5 +751,22 @@
       "retry_of": null,
       "recorded_at": "2026-10-09T14:29:11Z"
     }
-  ]
+  ],
+  "risk_authorizations": {
+    "plan-complete": {
+      "schema_version": "risk-selection-v1",
+      "authorization": {
+        "path": "agent-output/university/risk/risk-authorization.json",
+        "sha256": "1439357210aa08dd24b2d2cd151a2ea0a800f8bdada46ec433828995868914fa",
+        "id": "university-kit-lab-risk-1"
+      },
+      "approval": {
+        "path": "agent-output/university/risk/risk-gate-approval.json",
+        "sha256": "7eedcb021f6db0eabf2aa8dca1e803f709b867a9248559b3ab4e2905246b8010",
+        "id": "university-kit-lab-risk-1-gate"
+      },
+      "execution": null,
+      "context": null
+    }
+  }
 }

@@ -4,8 +4,8 @@
   "iac_tool": "",
   "region": "swedencentral",
   "branch": "main",
-  "updated": "2026-10-10T12:25:46Z",
-  "current_step": 4,
+  "updated": "2026-10-10T12:32:27Z",
+  "current_step": 5,
   "decisions": {
     "region": "swedencentral",
     "compliance": "none (training/demo; ALZ-lite deny policies binding)",
@@ -368,6 +368,22 @@
         "id": "university-kit-lab-risk-1"
       },
       "timestamp": "2026-10-10T12:25:46Z"
+    },
+    {
+      "id": "D044",
+      "step": 4,
+      "agent": "apex-recall",
+      "title": "Explicit lab risk authorization",
+      "choice": "EXCEPTION_AUTHORIZED",
+      "rationale": "Verified external authority and separate human approval; findings remain unresolved",
+      "decision": "Risk gate exception-authorized; findings remain unresolved",
+      "action": "codegen",
+      "authorization": {
+        "path": "agent-output/university/risk/risk-authorization.json",
+        "sha256": "1439357210aa08dd24b2d2cd151a2ea0a800f8bdada46ec433828995868914fa",
+        "id": "university-kit-lab-risk-1"
+      },
+      "timestamp": "2026-10-10T12:32:27Z"
     }
   ],
   "review_audit": {
@@ -482,10 +498,10 @@
     "5": {
       "name": "IaC Code",
       "agent": "",
-      "status": "complete",
+      "status": "in_progress",
       "sub_step": null,
-      "started": "2026-10-07T13:24:20Z",
-      "completed": "2026-10-07T13:41:59Z",
+      "started": "2026-10-10T12:32:27Z",
+      "completed": null,
       "artifacts": [],
       "context_files_used": []
     },
@@ -754,6 +770,21 @@
   ],
   "risk_authorizations": {
     "plan-complete": {
+      "schema_version": "risk-selection-v1",
+      "authorization": {
+        "path": "agent-output/university/risk/risk-authorization.json",
+        "sha256": "1439357210aa08dd24b2d2cd151a2ea0a800f8bdada46ec433828995868914fa",
+        "id": "university-kit-lab-risk-1"
+      },
+      "approval": {
+        "path": "agent-output/university/risk/risk-gate-approval.json",
+        "sha256": "7eedcb021f6db0eabf2aa8dca1e803f709b867a9248559b3ab4e2905246b8010",
+        "id": "university-kit-lab-risk-1-gate"
+      },
+      "execution": null,
+      "context": null
+    },
+    "codegen": {
       "schema_version": "risk-selection-v1",
       "authorization": {
         "path": "agent-output/university/risk/risk-authorization.json",
