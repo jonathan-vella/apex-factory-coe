@@ -8,13 +8,16 @@ references this file rather than inlining the full text.
 Apply the canonical [review lifecycle](../../apex-azure-defaults/references/adversarial-review-protocol.md#review-lifecycle)
 before the step-specific stages below. Verify proposed mitigations; automatic must-fix repair does not authorize redesign.
 
-## Stage 1 — Auto-apply every `must_fix` (mandatory)
+## Stage 1 — Repair Unexcepted `must_fix` Findings
 
-All `must_fix` findings would block deployment, violate the security
-baseline, or break a hard governance constraint. They are **not
-negotiable** and **must not** be presented as user choices.
+Default: repair every must-fix within the existing authorization and iteration cap. Do not assume every recommendation
+is a mandatory rule. If remediation is infeasible, stop for explicit per-finding owner authorization under the
+[lab risk contract](../../../../tools/apex-recall/docs/risk-authorizations.md). Ordinary consent is not authority.
+Applicable law, technical impossibility and mandatory requirements without a valid rule-authority exception remain
+non-waivable. Unresolved eligibility/authority blocks. Do not automatically select all findings or rewrite review evidence.
+Only a current evaluator result permits skipping repair of its explicitly covered findings for its exact lab action.
 
-For every `must_fix` finding across all passes:
+For every unexcepted `must_fix` finding across all passes:
 
 1. Apply the `suggested_fix.proposed_edit` (formerly `suggested_mitigation`)
   to `04-implementation-plan.md` using available targeted editing tools,
@@ -26,8 +29,9 @@ For every `must_fix` finding across all passes:
    `action: "accept"`,
    `note: "auto-applied (must_fix is mandatory)"`, following the sidecar
    schema in adversarial-review-protocol section 2a.
-3. Re-run every executed challenger pass with `overwrite: true` to
-   confirm the fixes landed (no new `must_fix` should remain). If any
+3. Re-run every executed challenger pass in place with `overwrite: true` to
+   confirm the fixes landed (no new `must_fix` should remain). This bounded fix-loop rerun
+   is not a Stage 3 confirmation review. If any
    `must_fix` returns, **repeat Stage 1** for the new findings — up to a
    hard cap of 2 auto-fix iterations, then STOP and surface a chat
    warning listing the unresolved finding(s) so the user can intervene.
@@ -69,6 +73,13 @@ on the remaining `should_fix` set only:
 
 ## Stage 3 — Final proceed gate
 
+For an explicit default-mode lab exception, evaluate `check-gate --action plan-complete --authorization-only` first,
+present unresolved findings and residual impacts, then obtain the separate signed human gate approval per the lab
+contract. Complete with explicit `--risk-authorization` and `--risk-approval`; combine with `--plan-review` only when
+that exact independently authorized review is bound. Keep NEEDS_REVISION unchanged and report `exception-authorized`.
+The completion write records `plan_status=EXCEPTION_AUTHORIZED`, not APPROVED. CodeGen separately checks `codegen`;
+Plan-only permission does not authorize a transition to Step 5. All non-review validators and frozen inputs still apply.
+
 Present the final aggregated summary (counts of accept/reject/defer/edit
 for must_fix + should_fix) and the handoff to the appropriate CodeGen
 agent (Bicep or Terraform based on `decisions.iac_tool`).
@@ -79,6 +90,9 @@ Resolve the review path before presenting approval. If a separately authorized d
 confirmation was saved as `challenge-findings-plan-pass<N>.json` (N greater than 1), retain the original
 `challenge-findings-plan.json` and use the confirming file explicitly at completion. Do not copy a clean review over
 history, restamp stale hashes, infer the newest filename or switch to deep mode because its filename contains `pass2`.
+Name each new confirmation with the next unused N (any integer ≥ 2, not capped at 3), set its `pass_number` to N and
+use `overwrite: false`; never overwrite an earlier pass file to reuse its number. Stage 1/2 in-place reruns are the
+bounded fix loop, not confirmations.
 
 Validate the selected review with `node tools/scripts/validate-challenger-findings.mjs --verify-cache <review-path>`.
 After explicit human approval, complete with:
