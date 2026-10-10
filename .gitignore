@@ -35,9 +35,6 @@ logs/
 # Root decision snapshots are generated artifacts, not source files.
 decisions*.json
 
-# apex-recall state-writer mutexes are transient runtime files.
-agent-output/*/00-session-state.json.lock
-
 # Stray `apex-recall show --json` redirects captured at repo root.
 # Same anti-pattern as decisions*.json above — these are operator-debug
 # snapshots, never source. If you need to keep one, put it under tmp/

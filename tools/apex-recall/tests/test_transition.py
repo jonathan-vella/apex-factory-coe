@@ -42,9 +42,18 @@ def _reimport_with_root(root: Path):
     return importlib.import_module("apex_recall.commands.transition")
 
 
-def _seed_project(root: Path, project: str, *, with_step_2_gating: bool = False, with_sidecar: bool = False) -> Path:
+def _seed_project(
+    root: Path,
+    project: str,
+    *,
+    with_step_2_gating: bool = False,
+    with_sidecar: bool = False,
+    in_order: bool = False,
+) -> Path:
     proj_dir = root / "agent-output" / project
     proj_dir.mkdir(parents=True, exist_ok=True)
+    # Review-gate tests exercise later steps directly, so by default every step counts as started.
+    later = {} if in_order else {step: {"status": "in_progress"} for step in ("2", "3", "3_5", "4", "5", "6", "7")}
     state = {
         "schema_version": "session-state-v3",
         "project": project,
@@ -52,6 +61,7 @@ def _seed_project(root: Path, project: str, *, with_step_2_gating: bool = False,
         "steps": {
             "1": {"status": "in_progress", "started": "2026-05-21T19:00:00Z"},
             "2": {"status": "not_started"},
+            **later,
         },
         "decisions": {},
     }
@@ -91,7 +101,7 @@ def _seed_review(project: Path, sidecar: str) -> dict:
         artifact, kind, focus = "04-implementation-plan.md", "implementation-plan", "comprehensive"
     else:
         artifact, kind, focus = "02-architecture-assessment.md", "architecture", "comprehensive"
-    if "pass1" in sidecar and kind in ("architecture", "implementation-plan"):
+    if sidecar.endswith("-pass1.json") and kind in ("architecture", "implementation-plan"):
         focus = "security-governance"
     artifact_path = project / artifact
     if not artifact_path.exists():
@@ -184,7 +194,7 @@ def test_complete_with_gating_artifact_and_sidecar_succeeds(tmp_path):
 
 def test_complete_blocked_when_sidecar_missing(tmp_path):
     transition_mod = _reimport_with_root(tmp_path)
-    _seed_project(tmp_path, "demo", with_step_2_gating=True, with_sidecar=False)
+    _seed_project(tmp_path, "demo", with_step_2_gating=True, with_sidecar=False, in_order=True)
     args = SimpleNamespace(
         project="demo",
         from_step="1",
@@ -290,7 +300,7 @@ def test_complete_bypass_without_reason_fails(tmp_path):
 
 def test_malformed_decision_rejected(tmp_path):
     transition_mod = _reimport_with_root(tmp_path)
-    _seed_project(tmp_path, "demo")
+    _seed_project(tmp_path, "demo", in_order=True)
     args = SimpleNamespace(
         project="demo",
         from_step="1",
@@ -498,16 +508,17 @@ def test_current_governance_review_allows_completion(tmp_path, command):
 
 
 @pytest.mark.parametrize("command", ["transition", "complete_step"])
-def test_explicit_plan_replacement_preserves_history_and_records_selection(tmp_path, command):
+@pytest.mark.parametrize("pass_number", [2, 8, 12])
+def test_explicit_plan_replacement_preserves_history_and_records_selection(tmp_path, command, pass_number):
     _reimport_with_root(tmp_path)
     module = importlib.import_module(f"apex_recall.commands.{command}")
     project = _seed_project(tmp_path, "demo")
     original = project / "challenge-findings-plan.json"
     _seed_review(project, original.name)
     (project / "04-implementation-plan.md").write_text("# Corrected plan\n", encoding="utf-8")
-    replacement = project / "challenge-findings-plan-pass2.json"
+    replacement = project / f"challenge-findings-plan-pass{pass_number}.json"
     review = _seed_review(project, replacement.name)
-    review["pass_number"] = 2
+    review["pass_number"] = pass_number
     replacement.write_text(json.dumps(review), encoding="utf-8")
     original_bytes, replacement_bytes = original.read_bytes(), replacement.read_bytes()
     args = SimpleNamespace(project="demo", step="4", from_step="4", to_step="5", complete=True, json=True)

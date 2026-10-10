@@ -95,9 +95,6 @@
     "apex/.vscode/mcp.json: azure-mcp": {
       "allowedDuringChat": true
     },
-    "apex-factory-coe/.vscode/mcp.json: azure-mcp": {
-      "allowedDuringChat": true
-    },
     "coe-linux-source/.vscode/mcp.json: azure-mcp": {
       "allowedDuringChat": true
     }
