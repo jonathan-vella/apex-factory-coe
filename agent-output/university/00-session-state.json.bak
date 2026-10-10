@@ -4,7 +4,7 @@
   "iac_tool": "",
   "region": "swedencentral",
   "branch": "main",
-  "updated": "2026-10-09T14:30:04Z",
+  "updated": "2026-10-09T16:16:45Z",
   "current_step": 4,
   "decisions": {
     "region": "swedencentral",
@@ -339,6 +339,12 @@
       "decision": "Fresh named Challenger adjudication in challenge-findings-plan-pass9.json upheld 569fbf8e as must_fix after reviewing historical owner acceptance and unchanged threat boundary. Approved plan-only clarifications and dependency-diagram assets are finalized; no should-fix or suggestions remain in this review. Stop at DRAFT; gate-3 is blocked.",
       "timestamp": "2026-10-09T14:30:04Z",
       "rationale": "B08 must provide an effective boundary preventing member workload principals from attaching id-sqlmi-directory to non-SQL-MI resource types, with independently verifiable enforcement evidence across member subscriptions. If unavailable, return to the owner for a separately authorized identity-isolation decision. Historical acceptance/pass8 remain untouched and are not technical remediation. No identity/grant/rights changes, Azure operation, CodeGen, new review selection, approval or gate completion is authorized or performed.",
+      "step": "4"
+    },
+    {
+      "decision": "Owner decision 2026-10-09: retain the existing B08/shared-identity architecture for this hackathon and accept 569fbf8e as an explicit residual LAB risk, not technical remediation. Participants with resource-write and identity-assignment rights can attach id-sqlmi-directory to non-SQL-MI resources; its Graph application permissions expose tenant-wide directory read, not contained by short-lived subscriptions. This acceptance does not authorize production reuse.",
+      "timestamp": "2026-10-09T16:16:45Z",
+      "rationale": "No restrictions, member-rights removal, Graph-grant changes or identity redesign authorized. Intended final teardown deletes the identity only after all SQL MI consumers are removed; rehearsal teardown retained it, and final deletion has not been evidenced. Tenant-owner approval, event-end date, named cleanup owner and consumer-removal/deletion verification remain outstanding. Existing APEX review lifecycle, gate-3 all-passes-APPROVED precondition and runtime completion check do not support a lab exception for a present must-fix. Record this owner decision only: no gates opened, no new override/closure, no review rerun, no approved plan, no Step 4 completion or CodeGen. Human route 01-Orchestrator for explicit APEX workflow/governance-owner authorization of a versioned scoped exception contract and legitimate enforcement semantics; no such contract change is authorized here.",
       "step": "4"
     }
   ],
