@@ -23,7 +23,7 @@ test("design-only governance trace checks L0/L1 without waiving the full chain",
       discovery_status: "COMPLETE",
       discovered_at: new Date().toISOString(),
       ttl_days: 7,
-      completeness_signature: `sha256:${"0".repeat(64)}`,
+      completeness_signature: `sha256:${"ab".repeat(32)}`,
     },
   };
   const source = path.join(project, "04-governance-constraints.json");
@@ -39,6 +39,16 @@ test("design-only governance trace checks L0/L1 without waiving the full chain",
   assert.equal(design.status, 0, design.stdout + design.stderr);
   assert.match(design.stdout, /L2\/L3 are not evaluated/);
   assert.equal(run().status, 1);
+  writeFileSync(
+    path.join(project, "04-implementation-plan.md"),
+    "## 🛡️ Governance Compliance Matrix\n\n| Resource ID | Status |\n| --- | --- |\n| fixture | ✅ satisfied |\n| other --- | ❌ unsatisfiable |\n",
+  );
+  const unsatisfied = run("--through", "L1");
+  assert.equal(unsatisfied.status, 1, "a failing row must not be dropped because it contains '---'");
+  constraints.discovery_metadata.completeness_signature = `sha256:${"0".repeat(64)}`;
+  writeFileSync(source, JSON.stringify(constraints));
+  assert.match(run("--through", "L1").stdout + run("--through", "L1").stderr, /all-zero placeholder/);
+  constraints.discovery_metadata.completeness_signature = `sha256:${"ab".repeat(32)}`;
   constraints.discovery_metadata.discovered_at = "invalid";
   writeFileSync(source, JSON.stringify(constraints));
   assert.equal(run("--through", "L1").status, 1);
@@ -434,6 +444,29 @@ test("network scanner blocks public data and unapproved APIs while allowing scop
   }
 });
 
+test("security baseline blocks alternative TLS spellings and scans bicepparam and top-level infra files", (context) => {
+  const validator = fileURLToPath(new URL("tools/scripts/validate-iac-security-baseline.mjs", root));
+  const cases = [
+    ["infra/bicep/t/main.bicep", "minTlsVersion: '1.0'", 1],
+    ["infra/bicep/t/main.bicep", "minimalTlsVersion: '1.1'", 1],
+    ["infra/bicep/t/main.bicep", "minimumTlsVersion: 'TLS1_2'", 0],
+    ["infra/terraform/t/main.tf", 'min_tls_version = "TLS1_0"', 1],
+    ["infra/terraform/t/main.tf", 'min_tls_version = "TLS1_2"', 0],
+    ["infra/bicep/t/main.bicepparam", "param publicNetworkAccess = 'Enabled'", 1],
+    ["infra/bicep/t/main.bicepparam", "param publicNetworkAccess = 'Disabled'", 0],
+    ["infra/main.bicep", "supportsHttpsTrafficOnly: false", 1],
+  ];
+  for (const [relative, content, expected] of cases) {
+    const directory = mkdtempSync(path.join(tmpdir(), "baseline-patterns-"));
+    context.after(() => rmSync(directory, { recursive: true, force: true }));
+    const target = path.join(directory, relative);
+    mkdirSync(path.dirname(target), { recursive: true });
+    writeFileSync(target, content);
+    const result = spawnSync(process.execPath, [validator], { cwd: directory, encoding: "utf8" });
+    assert.equal(result.status, expected, `${relative}: ${content}\n${result.stdout}${result.stderr}`);
+  }
+});
+
 test("SK25: templates preserve governed headings without deciding completion or routing", () => {
   for (const name of [
     "02-architecture-assessment",
@@ -634,6 +667,35 @@ test("assigned ADR guidance preserves alternative coverage and phase naming", ()
   assert.match(checklist, /number is sequential/);
   assert.match(checklist, /Proposed for design, Accepted for as-built/);
   assert.match(checklist, /WAF pillar analysis includes all 5 pillars/);
+});
+
+test("#739: IaC handoff inputs keep LF endings on every checkout", () => {
+  const lfPatterns = new Set(
+    read(".gitattributes")
+      .split("\n")
+      .map((line) => line.trim().split(/\s+/))
+      .filter((tokens) => tokens.includes("text") && tokens.includes("eol=lf"))
+      .map(([pattern]) => pattern),
+  );
+  for (const pattern of ["*.bicep", "*.bicepparam", "*.tf", "*.tfvars", "*.hcl", "*.json"]) {
+    assert.ok(lfPatterns.has(pattern), pattern);
+  }
+});
+
+test("#740: confirmation reviews may use pass numbers above 3", () => {
+  const subagent = read(".github/agents/_subagents/challenger-review-subagent.agent.md");
+  const challenger = read(".github/agents/10-challenger.agent.md");
+  assert.doesNotMatch(subagent, /`pass_number`: 1, 2, or 3/);
+  assert.match(subagent, /next unused N ≥ 2/);
+  assert.match(challenger, /next unused N ≥ 2/);
+  assert.match(skill("apex-iac-common/references/iac-planner-approval-gate.md"), /not capped at 3/);
+});
+
+test("#741: App Service managed-identity ACR pulls enable ARM audience tokens", () => {
+  const baseline = skill("apex-azure-defaults/references/security-baseline-full.md");
+  assert.match(baseline, /azureADAuthenticationAsArmPolicyStatus: 'enabled'/);
+  assert.match(baseline, /ARM audience token\s+authentication disabled/);
+  assert.match(skill("apex-azure-deploy/references/pre-deploy-checklist.md"), /authentication-as-arm show/);
 });
 
 test("SK32: compaction recovers required guidance without latency-derived tokens", () => {
