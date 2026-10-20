@@ -6,6 +6,9 @@
 .DESCRIPTION
     Wraps scripts/postdeploy-tests.ps1, reading the deployment outputs from the azd environment. On success it records
     CONTAINER_IMAGE (the registry copy) so a later `azd provision` does not revert the web app to the MCR placeholder.
+    It then runs scripts/write-deployment-summary.ps1 in a best-effort block: the summary is evidence written from the
+    observed deployment record and test results. A summary failure only produces a warning; it never changes the
+    outcome of this hook and never claims that deployment or any workflow step is complete.
 
 .EXAMPLE
     azd provision   # azure.yaml runs this hook automatically
@@ -38,3 +41,10 @@ $outcome = & (Join-Path $PSScriptRoot '..' 'postdeploy-tests.ps1') `
 
 & azd env set CONTAINER_IMAGE $outcome.ContainerImage | Out-Null
 if ($LASTEXITCODE -ne 0) { throw 'azd env set CONTAINER_IMAGE failed.' }
+
+try {
+    & (Join-Path $PSScriptRoot '..' 'write-deployment-summary.ps1') -Outcome $outcome
+}
+catch {
+    Write-Warning "The deployment summary was not written; no completion is claimed. Error: $($_.Exception.Message)"
+}
