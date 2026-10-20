@@ -74,9 +74,6 @@
   "chat.mcp.serverSampling": {
     "apex/.mcp.json: azure-mcp": {
       "allowedDuringChat": true
-    },
-    "coe-linux-source/.vscode/mcp.json: azure-mcp": {
-      "allowedDuringChat": true
     }
   }
 }
