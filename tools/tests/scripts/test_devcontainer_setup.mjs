@@ -15,7 +15,7 @@ function fixture(context) {
   return root;
 }
 
-test("VS Code cross-check distinguishes exclusions from recommendations", (context) => {
+function vscodeFixture(context) {
   const root = fixture(context);
   fs.mkdirSync(path.join(root, "tools/scripts"), { recursive: true });
   fs.mkdirSync(path.join(root, ".devcontainer"));
@@ -30,11 +30,18 @@ test("VS Code cross-check distinguishes exclusions from recommendations", (conte
   const recommendations = JSON.parse(
     fs.readFileSync(new URL("../../../.vscode/extensions.json", import.meta.url), "utf8"),
   );
+  const settings = parseJsonc(fs.readFileSync(new URL("../../../.vscode/settings.json", import.meta.url), "utf8"));
   const check = () => {
     fs.writeFileSync(path.join(root, ".devcontainer/devcontainer.json"), JSON.stringify(config));
     fs.writeFileSync(path.join(root, ".vscode/extensions.json"), JSON.stringify(recommendations));
+    fs.writeFileSync(path.join(root, ".vscode/settings.json"), JSON.stringify(settings));
     return spawnSync(process.execPath, [validator], { encoding: "utf8" });
   };
+  return { config, recommendations, settings, check, root, validator };
+}
+
+test("VS Code cross-check distinguishes exclusions from recommendations", (context) => {
+  const { config, recommendations, check } = vscodeFixture(context);
   const valid = check();
   assert.equal(valid.status, 0, valid.stdout + valid.stderr);
   recommendations.recommendations.push("ms-azuretools.vscode-azure-mcp-server@2.0.0");
@@ -42,6 +49,81 @@ test("VS Code cross-check distinguishes exclusions from recommendations", (conte
   recommendations.recommendations.pop();
   config.customizations.vscode.extensions.push("example.unexpected");
   assert.equal(check().status, 1);
+});
+
+test("VS Code validation rejects enabled retired hooks in workspace and container settings", (context) => {
+  const { config, settings, check } = vscodeFixture(context);
+  assert.equal(check().status, 0);
+  for (const source of [settings, config.customizations.vscode.settings]) {
+    assert.equal(source["chat.useCustomAgentHooks"], undefined);
+    assert.equal(source["chat.hookFilesLocations"], undefined);
+    source["chat.useCustomAgentHooks"] = true;
+    let result = check();
+    assert.equal(result.status, 1, result.stdout + result.stderr);
+    assert.match(result.stdout, /retired APEX custom agent hooks must not be enabled/);
+    source["chat.useCustomAgentHooks"] = false;
+    for (const location of [
+      ".github/hooks/tool-guardian",
+      ".github/hooks/subagent-validation",
+      ".github/hooks",
+      "./.github/hooks/tool-guardian",
+      ".github\\hooks\\tool-guardian",
+    ]) {
+      source["chat.hookFilesLocations"] = { [location]: true };
+      result = check();
+      assert.equal(result.status, 1, result.stdout + result.stderr);
+      assert.match(result.stdout, /retired APEX hook location must not be enabled/);
+      source["chat.hookFilesLocations"][location] = false;
+      result = check();
+      assert.equal(result.status, 0, result.stdout + result.stderr);
+    }
+    delete source["chat.useCustomAgentHooks"];
+    delete source["chat.hookFilesLocations"];
+  }
+});
+
+test("VS Code validation still fails for invalid structural settings", (context) => {
+  const { config, settings, check, root, validator } = vscodeFixture(context);
+  for (const source of [settings, config.customizations.vscode.settings]) {
+    for (const invalid of [null, [], "not an object"]) {
+      source["chat.hookFilesLocations"] = invalid;
+      const result = check();
+      assert.equal(result.status, 1, result.stdout + result.stderr);
+      assert.match(result.stdout, /chat.hookFilesLocations must be an object/);
+    }
+    source["chat.hookFilesLocations"] = { ".github/hooks/tool-guardian": "true" };
+    assert.equal(check().status, 1);
+    delete source["chat.hookFilesLocations"];
+    source["chat.useCustomAgentHooks"] = "true";
+    assert.equal(check().status, 1);
+    delete source["chat.useCustomAgentHooks"];
+  }
+  config.customizations.vscode.settings["chat.customAgentInSubagent.enabled"] = false;
+  assert.equal(check().status, 1);
+  delete config.customizations.vscode.settings["chat.useAgentSkills"];
+  assert.equal(check().status, 1);
+  config.customizations.vscode.settings["chat.customAgentInSubagent.enabled"] = true;
+  config.customizations.vscode.settings["chat.useAgentSkills"] = settings["chat.useAgentSkills"];
+  assert.equal(check().status, 0);
+  for (const invalid of ["{broken", "[]", "null"]) {
+    fs.writeFileSync(path.join(root, ".vscode/settings.json"), invalid);
+    const result = spawnSync(process.execPath, [validator], { encoding: "utf8" });
+    assert.equal(result.status, 1, result.stdout + result.stderr);
+  }
+});
+
+test("Copilot-only validation rejects ineffective Local discovery settings in either editor source", (context) => {
+  const { config, settings, check } = vscodeFixture(context);
+  for (const source of [settings, config.customizations.vscode.settings]) {
+    for (const key of ["chat.agentFilesLocations", "chat.agentSkillsLocations", "chat.instructionsFilesLocations"]) {
+      source[key] = { ".github/example": true };
+      const result = check();
+      assert.equal(result.status, 1, result.stdout + result.stderr);
+      assert.match(result.stdout, /remove Local-only/);
+      delete source[key];
+      assert.equal(check().status, 0);
+    }
+  }
 });
 
 test("extension policy requires exclusions and rejects direct or pinned duplicate providers", (context) => {
@@ -101,9 +183,8 @@ for (const scenario of ["current", "outdated", "offline", "timeout", "missing-np
     fs.writeFileSync(path.join(bin, "azd"), '#!/bin/bash\nprintf "azd %s\\n" "$*" >> "$CALL_LOG"\nexit 0\n', {
       mode: 0o755,
     });
-    fs.mkdirSync(path.join(root, ".vscode"));
-    const config = path.join(root, ".vscode", "mcp.json");
-    fs.writeFileSync(config, '{"servers":{"azure-mcp":{"command":"custom"}}}\n');
+    const config = path.join(root, ".mcp.json");
+    fs.writeFileSync(config, '{"mcpServers":{"azure-mcp":{"command":"custom"}}}\n');
     const original = fs.readFileSync(config, "utf8");
     const result = spawnSync("/bin/bash", [startup], {
       cwd: root,
@@ -135,27 +216,26 @@ for (const scenario of ["current", "outdated", "offline", "timeout", "missing-np
 }
 
 test("MCP updates preserve comments, custom values, unrelated servers and repeat-run bytes", (context) => {
-  const file = path.join(fixture(context), "mcp.json");
+  const file = path.join(fixture(context), ".mcp.json");
   fs.writeFileSync(
     file,
-    '{\n// keep this\n"inputs":[],"servers":{"azure-mcp":{"command":"custom","args":["pinned"]},"private":{"url":"https://example.test"},},\n}\n',
+    '{\n// keep this\n"mcpServers":{"azure-mcp":{"command":"custom","args":["pinned"]},"private":{"url":"https://example.test"},},\n}\n',
   );
   configureMcp(file);
   const once = fs.readFileSync(file, "utf8");
   assert.match(once, /\/\/ keep this/);
   const data = parseJsonc(once);
-  assert.deepEqual(data.servers["azure-mcp"], { command: "custom", args: ["pinned"] });
-  assert.deepEqual(data.servers.private, { url: "https://example.test" });
-  assert.deepEqual(data.inputs, []);
-  assert.ok(data.servers.github);
-  assert.ok(data.servers["azure-resource-manager-mcp"]);
+  assert.deepEqual(data.mcpServers["azure-mcp"], { command: "custom", args: ["pinned"] });
+  assert.deepEqual(data.mcpServers.private, { url: "https://example.test" });
+  assert.ok(data.mcpServers.github);
+  assert.ok(data.mcpServers["azure-resource-manager-mcp"]);
   configureMcp(file);
   assert.equal(fs.readFileSync(file, "utf8"), once);
 });
 
-test("MCP rejects malformed and invalid configuration without altering it", (context) => {
-  const file = path.join(fixture(context), "mcp.json");
-  for (const content of ["{broken", "[]", '{"servers":null}', '{"servers":[]}']) {
+test("MCP rejects malformed, legacy-servers and invalid configuration without altering it", (context) => {
+  const file = path.join(fixture(context), ".mcp.json");
+  for (const content of ["{broken", "[]", '{"servers":{}}', '{"mcpServers":null}', '{"mcpServers":[]}']) {
     fs.writeFileSync(file, content);
     assert.throws(() => configureMcp(file));
     assert.equal(fs.readFileSync(file, "utf8"), content);
@@ -163,21 +243,21 @@ test("MCP rejects malformed and invalid configuration without altering it", (con
 });
 
 test("MCP initializes missing configuration without touching credentials", (context) => {
-  const file = path.join(fixture(context), ".vscode/mcp.json");
+  const file = path.join(fixture(context), ".mcp.json");
   configureMcp(file);
-  assert.equal(Object.keys(parseJsonc(fs.readFileSync(file, "utf8")).servers).length, 3);
+  assert.equal(Object.keys(parseJsonc(fs.readFileSync(file, "utf8")).mcpServers).length, 3);
 });
 
 test("Azure MCP release checks reject outdated, prerelease, malformed and unavailable metadata without writes", (context) => {
-  const file = path.join(fixture(context), "mcp.json");
+  const file = path.join(fixture(context), ".mcp.json");
   configureMcp(file);
   const original = fs.readFileSync(file, "utf8");
   const config = parseJsonc(original);
-  const server = config.servers["azure-mcp"];
+  const server = config.mcpServers["azure-mcp"];
   const pinned = server.args[1].slice("@azure/mcp@".length);
   assert.deepEqual(server.env, { NPM_CONFIG_ALLOW_REMOTE: "all" });
-  const workspace = parseJsonc(fs.readFileSync(new URL("../../../.vscode/mcp.json", import.meta.url), "utf8"));
-  assert.deepEqual(workspace.servers["azure-mcp"], server);
+  const workspace = parseJsonc(fs.readFileSync(new URL("../../../.mcp.json", import.meta.url), "utf8"));
+  assert.deepEqual(workspace.mcpServers["azure-mcp"], server);
   assert.equal(checkAzureMcpRelease(file, () => JSON.stringify(["0.1.0", "999.0.0-beta.1", pinned])).status, "CURRENT");
   const newer = `${Number(pinned.split(".")[0]) + 1}.0.0`;
   assert.equal(azureMcpReleaseStatus(config, [pinned, newer]).status, "UPDATE_REQUIRED");
@@ -187,11 +267,11 @@ test("Azure MCP release checks reject outdated, prerelease, malformed and unavai
   }
   for (const version of ["latest", "next", "3.0.0-beta.1", "^2.0.0"]) {
     const changed = structuredClone(config);
-    changed.servers["azure-mcp"].args[1] = `@azure/mcp@${version}`;
+    changed.mcpServers["azure-mcp"].args[1] = `@azure/mcp@${version}`;
     assert.throws(() => azureMcpReleaseStatus(changed, [pinned]));
   }
   const drift = structuredClone(config);
-  drift.servers["azure-mcp"].args[1] = `@azure/mcp@${newer}`;
+  drift.mcpServers["azure-mcp"].args[1] = `@azure/mcp@${newer}`;
   assert.equal(azureMcpReleaseStatus(drift, [newer]).status, "UPDATE_REQUIRED");
   assert.throws(() => checkAzureMcpRelease(file, () => "invalid JSON"));
   assert.throws(() =>
@@ -202,7 +282,7 @@ test("Azure MCP release checks reject outdated, prerelease, malformed and unavai
   assert.equal(fs.readFileSync(file, "utf8"), original);
 });
 
-test("MCP validator accepts preserved commands but rejects malformed and retired entries", (context) => {
+test("MCP validator accepts preserved commands but rejects malformed, legacy and retired entries", (context) => {
   const root = fixture(context);
   fs.mkdirSync(path.join(root, "tools/scripts"), { recursive: true });
   fs.cpSync(new URL("../../scripts/_lib", import.meta.url), path.join(root, "tools/scripts/_lib"), { recursive: true });
@@ -211,7 +291,7 @@ test("MCP validator accepts preserved commands but rejects malformed and retired
     path.join(root, "tools/scripts/validate-mcp-config.mjs"),
   );
   fs.symlinkSync(new URL("../../../node_modules", import.meta.url), path.join(root, "node_modules"), "dir");
-  const file = path.join(root, ".vscode/mcp.json");
+  const file = path.join(root, ".mcp.json");
   configureMcp(file);
   const defaults = parseJsonc(fs.readFileSync(file, "utf8"));
   const check = (config) => {
@@ -223,17 +303,18 @@ test("MCP validator accepts preserved commands but rejects malformed and retired
     { type: "stdio", command: "npx", args: ["-y", "@azure/mcp@2.0.0", "server", "start", "--read-only"] },
     { type: "stdio", command: "/opt/custom/azure-mcp" },
   ])
-    assert.equal(check({ servers: { ...defaults.servers, "azure-mcp": server } }), 0);
+    assert.equal(check({ mcpServers: { ...defaults.mcpServers, "azure-mcp": server } }), 0);
   for (const server of [
     { type: "stdio", command: "" },
     { type: "stdio", command: "npx", args: [null] },
     { type: "http", command: "npx" },
   ])
-    assert.notEqual(check({ servers: { ...defaults.servers, "azure-mcp": server } }), 0);
+    assert.notEqual(check({ mcpServers: { ...defaults.mcpServers, "azure-mcp": server } }), 0);
   for (const retired of ["azure-pricing", "drawio", "astro-docs", "terraform"]) {
-    assert.notEqual(check({ servers: { ...defaults.servers, [retired]: null } }), 0);
+    assert.notEqual(check({ mcpServers: { ...defaults.mcpServers, [retired]: null } }), 0);
   }
-  assert.notEqual(check({ servers: [] }), 0);
+  assert.notEqual(check({ mcpServers: [] }), 0);
+  assert.notEqual(check({ servers: defaults.mcpServers }), 0);
 });
 
 test("tool version gate supports Azure CLI Bicep fallback without waiving minimums", (context) => {

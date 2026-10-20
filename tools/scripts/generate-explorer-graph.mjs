@@ -33,6 +33,7 @@ import { format, resolveConfig } from "prettier";
 import { parseFrontmatter } from "./_lib/parse-frontmatter.mjs";
 import { expandScript } from "./_lib/npm-script-graph.mjs";
 import { extractSkillReferences } from "./_lib/skill-references.mjs";
+import { PROMPT_SOURCE_DIRS } from "./_lib/paths.mjs";
 import { readJson } from "./_lib/json.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -170,10 +171,10 @@ export function collectAgents(root = REPO_ROOT) {
   });
 }
 
-export function collectSubagents(root = REPO_ROOT) {
+export function collectSubagents(root = REPO_ROOT, agents = collectAgents(root)) {
   const dir = join(root, ".github/agents/_subagents");
   const files = listFiles(dir, (f) => f.endsWith(".agent.md"));
-  return files.map((path) => {
+  const nodes = files.map((path) => {
     const content = readFileSync(path, "utf8");
     const fm = parseFrontmatter(content) || {};
     const name = fm.name || basename(path, ".agent.md");
@@ -191,6 +192,20 @@ export function collectSubagents(root = REPO_ROOT) {
       },
     };
   });
+  if (agents.some((agent) => agent.meta.subagents.includes("rubber-duck"))) {
+    const contract = ".github/skills/apex-azure-defaults/references/one-shot-review.md";
+    nodes.push({
+      id: "subagent:rubber-duck",
+      category: "subagent",
+      label: "rubber-duck",
+      description:
+        "Runtime-provided one-shot reviewer; its source link is the review contract, not an agent definition.",
+      path: contract,
+      links: { source: GITHUB_BASE + contract },
+      meta: { builtin: true, model: null, invocable: false, skills: [] },
+    });
+  }
+  return nodes;
 }
 
 export function collectSkills(root = REPO_ROOT) {
@@ -243,7 +258,7 @@ function collectInstructions() {
 }
 
 export function collectPrompts(root = REPO_ROOT) {
-  const files = [".github/prompts", "tools/apex-prompts"].flatMap((directory) =>
+  const files = PROMPT_SOURCE_DIRS.flatMap((directory) =>
     listFiles(join(root, directory), (file) => file.endsWith(".prompt.md"), true),
   );
   const counts = new Map();
@@ -310,15 +325,15 @@ function collectValidators() {
 }
 
 function collectMcpServers() {
-  const mcp = readJson(join(REPO_ROOT, ".vscode/mcp.json"));
-  const servers = mcp.servers || {};
+  const mcp = readJson(join(REPO_ROOT, ".mcp.json"));
+  const servers = mcp.mcpServers || mcp.servers || {};
   return Object.entries(servers).map(([name, cfg]) => ({
     id: `mcp:${slug(name)}`,
     category: "mcp",
     label: name,
     description: cfg.type === "http" ? `HTTP: ${cfg.url}` : `stdio: ${cfg.command || ""}`,
-    path: ".vscode/mcp.json",
-    links: { source: `${GITHUB_BASE}.vscode/mcp.json` },
+    path: ".mcp.json",
+    links: { source: `${GITHUB_BASE}.mcp.json` },
     meta: { type: cfg.type || "" },
   }));
 }
@@ -577,7 +592,7 @@ export async function main(args = process.argv.slice(2)) {
   }
   const outputPath = args.length ? resolve(args[1]) : DEFAULT_OUTPUT;
   const agents = collectAgents();
-  const subagents = collectSubagents();
+  const subagents = collectSubagents(REPO_ROOT, agents);
   const skills = collectSkills();
   const instructions = collectInstructions();
   const prompts = collectPrompts();
