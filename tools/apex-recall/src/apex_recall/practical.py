@@ -41,7 +41,9 @@ def enabled(data: dict) -> bool:
 
 
 def validate_state(data: dict) -> None:
-    if not enabled(data):
+    from .assessment import enabled as assessment_enabled
+
+    if not enabled(data) and not assessment_enabled(data):
         return
     decisions = data["decisions"]
     for key in ("material_inputs", "phase_scopes", "review_cycles", "assessment_views"):
@@ -303,7 +305,10 @@ def check_views(project: str, data: dict, step: str) -> None:
     if not binding or binding["projection_sha256"] != digest(view):
         raise ValueError("Assessment views are missing or stale against consumed decisions")
     expected_markdown = "04-governance-constraints.md" if step == "3_5" else f"assessment-step-{step}.md"
-    if Path(binding["path"]).name != f"assessment-step-{step}.json" or Path(binding["markdown"]).name != expected_markdown:
+    if (
+        Path(binding["path"]).name != f"assessment-step-{step}.json"
+        or Path(binding["markdown"]).name != expected_markdown
+    ):
         raise ValueError("Assessment bindings must use their project-local canonical paths")
     directory = project_dir(project)
     target = resolve_project_file(directory, binding["path"])
@@ -335,7 +340,43 @@ def check_views(project: str, data: dict, step: str) -> None:
     if readiness["status"] == "blocked":
         raise ValueError(f"Scoped readiness blocked: {readiness['holds']}")
     if step == "2":
-        check_feasibility(project, data)
+        assessment_only = data.get("decisions", {}).get("assessment_exit") == "assessment_only"
+        if not assessment_only:
+            check_feasibility(project, data)
+        if data.get("decisions", {}).get("assessment_cost_status") == "not_assessed":
+            if not assessment_only:
+                raise ValueError("Unpriced assessment cannot authorize implementation continuation")
+            check_unpriced_assessment(project, data)
+    elif step in ("4", "5", "6") and data.get("decisions", {}).get("assessment_exit") == "assessment_only":
+        raise ValueError("Assessment-only exit does not authorize implementation continuation")
+
+
+def check_unpriced_assessment(project: str, data: dict) -> None:
+    directory = project_dir(project)
+    status_path = resolve_contract_path(directory, "02-assessment-cost-status.json")
+    if status_path.is_symlink() or not status_path.is_file():
+        raise ValueError("Unpriced assessment requires a project-local cost-status artifact")
+    data.input_revisions[status_path] = file_revision(status_path)
+    status = json.loads(status_path.read_text(encoding="utf-8"))
+    if (
+        not isinstance(status, dict)
+        or set(status) != {"status", "reason", "evidence"}
+        or status["status"] != "NOT_ASSESSED"
+        or not isinstance(status["reason"], str)
+        or not status["reason"].strip()
+        or not isinstance(status["evidence"], list)
+        or not status["evidence"]
+        or any(not isinstance(item, str) or not item.strip() for item in status["evidence"])
+    ):
+        raise ValueError("Cost-status artifact requires NOT_ASSESSED, a reason and nonempty evidence locators")
+    estimate = resolve_contract_path(directory, "02-cost-estimate.json")
+    data.input_revisions[estimate] = file_revision(estimate)
+    if estimate.exists():
+        raise ValueError("Unpriced assessment cannot hide a pricing result; preserve prior attempts in _meta/")
+    report = directory / "03-des-cost-estimate.md"
+    if not report.is_file():
+        raise ValueError("Unpriced assessment requires the gap-only cost report and its independent review")
+    data.input_revisions[report] = file_revision(report)
 
 
 def adoption_report(data: dict) -> dict:
@@ -366,8 +407,10 @@ def cycle_identity(request: dict) -> str:
 
 
 def extend_cycle(data: dict, extension: dict) -> None:
+    from .assessment import enabled as assessment_enabled
+
     if (
-        not enabled(data)
+        not (enabled(data) or assessment_enabled(data))
         or not isinstance(extension, dict)
         or set(extension) != {"cycle_id", "max_calls", "request_id", "projection_sha256"}
     ):
@@ -379,7 +422,10 @@ def extend_cycle(data: dict, extension: dict) -> None:
         raise ValueError("Extension must explicitly increase an existing cycle's bound")
     if not isinstance(extension["request_id"], str) or not extension["request_id"].strip():
         raise ValueError("Owner extension approval provenance required")
-    if extension["projection_sha256"] != digest(projection(data, cycle["step"])):
+    snapshot = (
+        data["assessment_run"]["scope_digest"] if assessment_enabled(data) else digest(projection(data, cycle["step"]))
+    )
+    if extension["projection_sha256"] != snapshot:
         raise ValueError("Extension scope does not match current consumed decisions")
     cycle["max_calls"] = extension["max_calls"]
     cycle["projection"] = extension["projection_sha256"]
@@ -394,8 +440,12 @@ def extend_cycle(data: dict, extension: dict) -> None:
 
 
 def prepare_cycle(project: str, data: dict, args: object) -> dict | None:
+    from .assessment import check_frozen, review_key
+    from .assessment import enabled as assessment_enabled
+
+    assessing = assessment_enabled(data)
     request_path = getattr(args, "review_request", None)
-    if not enabled(data):
+    if not enabled(data) and not assessing:
         if request_path:
             raise ValueError("Review-cycle request requires explicit workflow adoption")
         return None
@@ -405,7 +455,12 @@ def prepare_cycle(project: str, data: dict, args: object) -> dict | None:
         raise ValueError("Practical review attempts require the exact --review-request")
     request = json.loads(request_path.read_text(encoding="utf-8"))
     step = str(args.step)
-    check_views(project, data, step)
+    if assessing:
+        if data["assessment_run"]["phase"] != "review":
+            raise ValueError("Assessment reviewer dispatch requires the graph review phase")
+        check_frozen(project, data)
+    else:
+        check_views(project, data, step)
     if request.get("project_name") != project or request.get("step") != step:
         raise ValueError("Review request project/step differs from attempt scope")
     if getattr(args, "attempt_id", None) not in (None, request.get("request_id")):
@@ -416,32 +471,45 @@ def prepare_cycle(project: str, data: dict, args: object) -> dict | None:
             request["artifact_path"],
             *[item["path"] for item in request.get("supporting_inputs", [])],
         ]
-    key = cycle_identity(request)
+    key = review_key(data, request) if assessing else cycle_identity(request)
     history = data.get("review_attempts", [])
     previous = [item for item in history if item["id"] == args.attempt_id]
     cycles = data.setdefault("decisions", {}).setdefault("review_cycles", {})
     cycle = cycles.get(key)
     if args.attempt_outcome == "started" and not previous:
-        binding = data["decisions"]["assessment_views"][step]
+        binding = data["decisions"].get("assessment_views", {}).get(step)
         pdir = project_dir(project)
-        binding_file = resolve_project_file(pdir, binding["path"])
-        binding_name = Path(binding["path"]).name
-        expected_paths = {
-            f"agent-output/{project}/{binding['path']}",
-            f"agent-output/{project}/{binding_name}",
-            f"agent-output/{project}/_meta/{binding_name}",
-        }
-        if not any(
-            item.get("path") in expected_paths
-            and item.get("sha256") == file_revision(binding_file)
-            for item in request.get("supporting_inputs", [])
-        ):
-            raise ValueError("Review request must freeze the consumed decision projection")
+        if assessing:
+            snapshot = data["assessment_run"]["scope_digest"]
+            supporting = {item["path"]: item["sha256"] for item in request.get("supporting_inputs", [])}
+            for relative, sha in data["assessment_run"]["frozen_inputs"].items():
+                expected = f"agent-output/{project}/{relative}"
+                if expected != request["artifact_path"] and supporting.get(expected) != sha:
+                    raise ValueError("Assessment review request must freeze every supporting bundle input")
+            linked = data["assessment_run"].get("review_links", {}).get(request["review_focus"])
+            if linked:
+                if cycle["projection"] not in (linked["original_projection"], snapshot):
+                    raise ValueError("Aliased review scope requires explicit bounded owner reconciliation")
+                snapshot = cycle["projection"]
+        else:
+            binding_file = resolve_project_file(pdir, binding["path"])
+            binding_name = Path(binding["path"]).name
+            expected_paths = {
+                f"agent-output/{project}/{binding['path']}",
+                f"agent-output/{project}/{binding_name}",
+                f"agent-output/{project}/_meta/{binding_name}",
+            }
+            if not any(
+                item.get("path") in expected_paths and item.get("sha256") == file_revision(binding_file)
+                for item in request.get("supporting_inputs", [])
+            ):
+                raise ValueError("Review request must freeze the consumed decision projection")
+            snapshot = digest(projection(data, step))
         root = workspace_root_for()
         result = subprocess.run(
             [
                 "node",
-                str(root / "tools/scripts/record-review.mjs"),
+                str((root / "tools/scripts/record-review.mjs").resolve()),
                 "--preflight",
                 "--request",
                 str(request_path.resolve()),
@@ -453,7 +521,6 @@ def prepare_cycle(project: str, data: dict, args: object) -> dict | None:
         )
         if result.returncode:
             raise ValueError(f"Review preflight failed: {result.stderr.strip()}")
-        snapshot = digest(projection(data, step))
         if cycle:
             if cycle["projection"] != snapshot:
                 raise ValueError("Material scope changed; owner-led cycle revision required, not an allowance reset")
@@ -528,7 +595,13 @@ def select_cycle_result(project: str, data: dict, args: object, prepared: dict |
     ):
         raise ValueError("Review result identity/lens differs from its recorded attempt")
     validation = subprocess.run(
-        ["node", str(root / "tools/scripts/validate-challenger-findings.mjs"), "--path", str(target), "--verify-cache"],
+        [
+            "node",
+            str((root / "tools/scripts/validate-challenger-findings.mjs").resolve()),
+            "--path",
+            str(target),
+            "--verify-cache",
+        ],
         cwd=root,
         capture_output=True,
         text=True,
@@ -538,6 +611,7 @@ def select_cycle_result(project: str, data: dict, args: object, prepared: dict |
         raise ValueError(f"Current review result invalid: {validation.stdout} {validation.stderr}")
     data.input_revisions[target] = file_revision(target)
     data["decisions"]["review_cycles"][prepared["key"]]["current_path"] = target.name
+    data["decisions"]["review_cycles"][prepared["key"]]["current_artifact"] = request["artifact_path"]
 
 
 def cycle_paths(data: dict, step: str, gates: list[tuple[str, str]]) -> list[tuple[str, str]]:
@@ -581,53 +655,109 @@ def action_readiness(data: dict, action: str, environments: list[str]) -> dict:
     }
 
 
-def _feasibility_validation(project: str, data: dict, snapshot: Path) -> None:
+def _feasibility_validation(project: str, data: dict, snapshot: Path) -> dict[str, str]:
     record = material_inputs(data).get("azure_read_scope")
     if (
         not enabled(data)
         or not record
         or not isinstance(record["value"], dict)
-        or not isinstance(record["value"].get("subscription_id"), str)
-        or not record["value"]["subscription_id"].strip()
         or record["value"].get("policy_read_scope") != "subscription-and-inherited"
     ):
         raise ValueError("Explicit target/read scope is required before policy discovery")
+    scope = record["value"]
+    multiple = "subscription_ids" in scope
+    subscriptions = scope.get("subscription_ids") if multiple else [scope.get("subscription_id")]
+    if (
+        (multiple and "subscription_id" in scope)
+        or not isinstance(subscriptions, list)
+        or not subscriptions
+        or any(not isinstance(item, str) or not item.strip() or item != item.strip() for item in subscriptions)
+        or len({item.lower() for item in subscriptions}) != len(subscriptions)
+    ):
+        raise ValueError("Explicit target/read scope requires unique nonempty subscription IDs")
     root = workspace_root_for()
-    target = snapshot.resolve()
-    if snapshot.is_symlink() or not target.is_relative_to(root.resolve()):
-        raise ValueError("Policy evidence must remain in the workspace")
+
+    def evidence_path(candidate: Path) -> Path:
+        target = candidate.resolve()
+        if candidate.is_symlink() or not target.is_relative_to(root.resolve()):
+            raise ValueError("Policy evidence must remain in the workspace")
+        if not target.is_file():
+            raise ValueError(f"Preliminary policy evidence is missing: {candidate}")
+        return target
+
+    target = evidence_path(snapshot)
+    snapshots = {subscriptions[0]: target}
+    if multiple:
+        index = json.loads(target.read_text(encoding="utf-8"))
+        entries = index.get("subscriptions") if isinstance(index, dict) else None
+        if not isinstance(entries, list) or not entries:
+            raise ValueError("Multi-subscription policy evidence requires a subscriptions index")
+        snapshots = {}
+        for entry in entries:
+            if (
+                not isinstance(entry, dict)
+                or not isinstance(entry.get("subscription_id"), str)
+                or not isinstance(entry.get("path"), str)
+                or not entry["path"].strip()
+                or Path(entry["path"]).is_absolute()
+            ):
+                raise ValueError("Policy subscription index requires subscription_id and index-relative path")
+            identity = entry["subscription_id"].lower()
+            if identity in snapshots:
+                raise ValueError("Duplicate policy subscription snapshot")
+            snapshots[identity] = target.parent / entry["path"]
+        if set(snapshots) != {item.lower() for item in subscriptions}:
+            raise ValueError("Policy snapshots must cover exactly every subscription in the authorized read scope")
+        if len({item.resolve() for item in snapshots.values()}) != len(snapshots):
+            raise ValueError("Each subscription requires a distinct policy snapshot")
+
     script = root / ".github/skills/apex-azure-governance-discovery/scripts/discover.py"
-    result = subprocess.run(
-        [
-            sys.executable,
-            str(script),
-            "--project",
-            project,
-            "--subscription",
-            record["value"]["subscription_id"],
-            "--out",
-            str(target),
-            "--validate-only",
-        ],
-        cwd=root,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if result.returncode:
-        raise ValueError(
-            f"Preliminary policy evidence is incomplete, stale or differently scoped: {result.stdout} {result.stderr}"
+    revisions = {}
+    failures = []
+    for subscription, candidate in snapshots.items():
+        try:
+            candidate = evidence_path(candidate)
+        except ValueError as error:
+            failures.append(f"{subscription}: {error}")
+            continue
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(script),
+                "--project",
+                project,
+                "--subscription",
+                subscription,
+                "--out",
+                str(candidate),
+                "--validate-only",
+            ],
+            cwd=root,
+            capture_output=True,
+            text=True,
+            check=False,
         )
+        if result.returncode:
+            failures.append(f"{subscription}: {result.stdout} {result.stderr}")
+        revisions[str(candidate.relative_to(root.resolve()))] = file_revision(candidate)
+    if failures:
+        raise ValueError(
+            f"Preliminary policy evidence is incomplete, stale or differently scoped: {'; '.join(failures)}"
+        )
+    for name, revision in revisions.items():
+        data.input_revisions[root / name] = revision
     data.input_revisions[target] = file_revision(target)
+    return revisions if multiple else {}
 
 
 def bind_feasibility(project: str, data: dict, snapshot: Path) -> None:
-    _feasibility_validation(project, data, snapshot)
+    snapshots = _feasibility_validation(project, data, snapshot)
     root = workspace_root_for()
     data.setdefault("metadata", {})["policy_feasibility"] = {
         "path": str(snapshot.resolve().relative_to(root.resolve())),
         "sha256": file_revision(snapshot),
         "read_scope": digest(material_inputs(data)["azure_read_scope"]),
+        **({"snapshots": snapshots} if snapshots else {}),
     }
 
 
@@ -641,7 +771,9 @@ def check_feasibility(project: str, data: dict) -> str:
     snapshot = root / record["path"]
     if not snapshot.exists():
         snapshot = resolve_contract_path(project, Path(record["path"]).name)
-    _feasibility_validation(project, data, snapshot)
+    snapshots = _feasibility_validation(project, data, snapshot)
     if file_revision(snapshot) != record["sha256"]:
         raise ValueError("Policy evidence changed; explicit owner refresh binding required")
+    if snapshots != record.get("snapshots", {}):
+        raise ValueError("Policy subscription evidence changed; explicit owner refresh binding required")
     return "current"

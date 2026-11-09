@@ -1,6 +1,6 @@
 {
   "$schema": "../../tools/schemas/explorer-graph.schema.json",
-  "generatedAt": "2026-10-27T08:22:50.539Z",
+  "generatedAt": "2026-11-06T10:15:56.106Z",
   "categories": [
     { "id": "agent", "key": "agents", "label": "Agent", "color": "#3b82f6", "shape": "round-rectangle", "count": 14 },
     {
@@ -20,7 +20,7 @@
       "shape": "rectangle",
       "count": 26
     },
-    { "id": "prompt", "key": "prompts", "label": "Prompt", "color": "#ec4899", "shape": "tag", "count": 0 },
+    { "id": "prompt", "key": "prompts", "label": "Prompt", "color": "#ec4899", "shape": "tag", "count": 1 },
     {
       "id": "validator",
       "key": "validators",
@@ -39,8 +39,8 @@
     },
     { "id": "mcp", "key": "mcp_servers", "label": "MCP Server", "color": "#f43f5e", "shape": "barrel", "count": 2 }
   ],
-  "nodeCount": 171,
-  "edgeCount": 556,
+  "nodeCount": 172,
+  "edgeCount": 563,
   "nodes": [
     {
       "id": "agent:01-orchestrator",
@@ -108,6 +108,7 @@
         "subagents": ["cost-estimate-subagent", "challenger-review-subagent"],
         "handoffTargets": [],
         "skills": [
+          "apex-azure-cost-optimization",
           "apex-azure-defaults",
           "apex-azure-artifacts",
           "apex-azure-kubernetes",
@@ -1324,6 +1325,17 @@
       "meta": { "applyTo": "**/*.agent.md, **/*.prompt.md" }
     },
     {
+      "id": "prompt:waf-assess-existing",
+      "category": "prompt",
+      "label": "waf-assess-existing",
+      "description": "Assess an existing Azure workload from IaC, architecture diagrams and optional read-only multi-subscription inventory.",
+      "path": ".github/prompts/waf-assess-existing.prompt.md",
+      "links": {
+        "source": "https://github.com/jonathan-vella/apex/blob/main/.github/prompts/waf-assess-existing.prompt.md"
+      },
+      "meta": { "agent": "01-Orchestrator" }
+    },
+    {
       "id": "validator:validate-artifacts",
       "category": "validator",
       "label": "validate:artifacts",
@@ -2404,6 +2416,12 @@
       "kind": "uses-skill"
     },
     {
+      "id": "agent:03-architect--uses-skill->skill:apex-azure-cost-optimization",
+      "source": "agent:03-architect",
+      "target": "skill:apex-azure-cost-optimization",
+      "kind": "uses-skill"
+    },
+    {
       "id": "agent:03-architect--uses-skill->skill:apex-azure-defaults",
       "source": "agent:03-architect",
       "target": "skill:apex-azure-defaults",
@@ -2662,6 +2680,12 @@
       "kind": "uses-skill"
     },
     {
+      "id": "prompt:waf-assess-existing--invokes->agent:01-orchestrator",
+      "source": "prompt:waf-assess-existing",
+      "target": "agent:01-orchestrator",
+      "kind": "invokes"
+    },
+    {
       "id": "instruction:agent-authoring--applies-to->agent:01-orchestrator",
       "source": "instruction:agent-authoring",
       "target": "agent:01-orchestrator",
@@ -2785,6 +2809,12 @@
       "id": "instruction:agent-authoring--applies-to->subagent:terraform-validate-subagent",
       "source": "instruction:agent-authoring",
       "target": "subagent:terraform-validate-subagent",
+      "kind": "applies-to"
+    },
+    {
+      "id": "instruction:agent-authoring--applies-to->prompt:waf-assess-existing",
+      "source": "instruction:agent-authoring",
+      "target": "prompt:waf-assess-existing",
       "kind": "applies-to"
     },
     {
@@ -4852,6 +4882,12 @@
       "kind": "applies-to"
     },
     {
+      "id": "instruction:vendor-prompting--applies-to->prompt:waf-assess-existing",
+      "source": "instruction:vendor-prompting",
+      "target": "prompt:waf-assess-existing",
+      "kind": "applies-to"
+    },
+    {
       "id": "workflow:ci--runs->validator:lint-powershell",
       "source": "workflow:ci",
       "target": "validator:lint-powershell",
@@ -5062,6 +5098,12 @@
       "kind": "refs"
     },
     {
+      "id": "skill:apex-azure-artifacts--refs->skill:apex-workflow-engine",
+      "source": "skill:apex-azure-artifacts",
+      "target": "skill:apex-workflow-engine",
+      "kind": "refs"
+    },
+    {
       "id": "skill:apex-azure-bicep-patterns--refs->skill:apex-azure-adr",
       "source": "skill:apex-azure-bicep-patterns",
       "target": "skill:apex-azure-adr",
@@ -5131,6 +5173,12 @@
       "id": "skill:apex-azure-compute--refs->skill:apex-azure-quotas",
       "source": "skill:apex-azure-compute",
       "target": "skill:apex-azure-quotas",
+      "kind": "refs"
+    },
+    {
+      "id": "skill:apex-azure-cost-optimization--refs->skill:apex-azure-artifacts",
+      "source": "skill:apex-azure-cost-optimization",
+      "target": "skill:apex-azure-artifacts",
       "kind": "refs"
     },
     {
@@ -5449,6 +5497,12 @@
       "id": "skill:apex-mermaid--refs->skill:apex-python-diagrams",
       "source": "skill:apex-mermaid",
       "target": "skill:apex-python-diagrams",
+      "kind": "refs"
+    },
+    {
+      "id": "skill:apex-python-diagrams--refs->skill:apex-azure-adr",
+      "source": "skill:apex-python-diagrams",
+      "target": "skill:apex-azure-adr",
       "kind": "refs"
     },
     {
