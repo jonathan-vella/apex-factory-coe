@@ -8,7 +8,16 @@ short pointer rather than inlining the protocols, keeping each agent
 body within the 500-line budget. **Always-read** when an agent
 implements one of the gates below.
 
+For explicit `workflow_mode=assessment`, use
+[standalone scope and final bundle acceptance](../../apex-workflow-engine/references/standalone-assessment.md)
+instead. The delivery SKU, budget, VNet, optional Design and intermediate approval gates below do not
+apply to that profile. Do not silently adopt a legacy project or waive its recorded review allowance.
+
 ## Architect (Step 2) — Phase 6a: SKU confirmation gate
+
+This implementation-planning gate does not apply to existing-workload Assessment scenarios. Assessment-only
+recommendations are nonbinding; report evidence-backed current SKUs and any unknowns without requesting
+approval or revision of future choices.
 
 Run before any `cost-estimate-subagent` invocation. Read
 `agent-output/{project}/sku-manifest.json`. Build a read-only chat
@@ -28,6 +37,10 @@ The pricing step's precondition guard refuses to invoke the subagent
 unless `sku_confirmation_status == "approved"`.
 
 ## Architect (Step 2) — Phase 9a: Budget gate
+
+For existing-workload Assessment, do not propose or require a budget cap or overage decision. Compare verified
+cost evidence to an explicitly supplied planning target when present; otherwise state that budget alignment
+is unknown. This does not grant spending authority. Implementation-planning workflows retain the cases below.
 
 Run after pricing receive. Three cases:
 
@@ -83,6 +96,10 @@ unanswered question blocks the approval gate.
 
 ## Architect (Step 2) — Cost-monitoring routing in artifact
 
+For existing-workload Assessment, report observed cost-monitoring configuration and recipient/routing evidence
+only. Mark unavailable configuration or ownership unknown; do not present future budget/action-group settings as
+current state or ask for recipient emails. The requirements below apply to implementation-planning artifacts.
+
 When writing `02-architecture-assessment.md`, the **WAF Cost** /
 **WAF Operational Excellence** sections must include a "Cost
 monitoring routing" sub-block stating, in plain prose, how alerts
@@ -108,6 +125,10 @@ do **not** duplicate it in 02-Requirements. Source contract:
 
 ## Architect (Step 2) — Per-finding askMe (Approval Gate)
 
+For existing-workload Assessment, preserve WAF gaps as findings and roadmap entries without requiring
+individual Accept/Reject/Defer decisions. The assessment gate approves/pause-or-continue scope, not each
+remediation. The per-finding protocol below applies to legacy/non-assessment workflows that require it.
+
 After the WAF + cost summary and findings table, follow the
 [Per-Finding Decision Protocol](adversarial-review-protocol.md#per-finding-decision-protocol).
 Use one batched `ask_user` panel with a separate question per
@@ -119,7 +140,8 @@ or repeat a decision already recorded for the current finding.
 ## Architect (Step 2) — Cost-feasibility review gate
 
 The separate cost-estimate review is mandatory in default and deep modes,
-regardless of budget utilization. Resolve the budget gate above first, then
+regardless of budget utilization. For Assessment, retain this review for available cost evidence and disclosed
+coverage gaps without requiring a budget decision. For implementation planning, resolve the budget gate above, then
 run `challenger-review-subagent` through [shared structured review](one-shot-review.md) with `artifact_type: cost-estimate`,
 `review_focus: cost-feasibility`, and
 `output_path: agent-output/{project}/challenge-findings-cost-estimate.json`.
@@ -138,6 +160,9 @@ reviewed artifact badges. On resume, verify both Step 2 review hashes before rou
 stale evidence returns to Architect for reconciliation without resetting unrelated approvals.
 
 ## Architect (Step 2) — Phase 6b: VNet planning gate
+
+This implementation-design gate does not apply to existing-workload Assessment scenarios. Use observed network
+evidence; report missing topology/CIDR details as gaps rather than asking the user to design a future network.
 
 Runs **after Phase 6a (SKU confirmation)** and **before Step 7
 (pricing)** when the trigger contract holds (see

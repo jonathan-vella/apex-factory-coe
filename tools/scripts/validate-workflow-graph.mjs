@@ -273,9 +273,9 @@ for (const edge of graph.edges) {
 
 // Validate metadata.version
 const expectedMajors = ["2", "3"];
-const knownVersions = new Set(["2.1", "2.2", "2.3", "2.4", "2.5", "3.0"]);
+const knownVersions = new Set(["2.1", "2.2", "2.3", "2.4", "2.5", "3.0", "3.1", "3.2"]);
 const metaVersion = graph.metadata?.version;
-if (metaVersion === "2.5" || metaVersion === "3.0") {
+if (["2.5", "3.0", "3.1", "3.2"].includes(metaVersion)) {
   const contract = graph.metadata?.risk_acceptance;
   if (
     contract?.contract !== "risk-authorization-v1" ||
@@ -302,7 +302,7 @@ if (metaVersion === undefined) {
 } else if (!expectedMajors.includes(metaVersion.split(".")[0])) {
   r.error(`Unsupported metadata.version major: ${metaVersion}`);
 }
-if (metaVersion === "3.0") {
+if (["3.0", "3.1", "3.2"].includes(metaVersion)) {
   const contract = graph.metadata.practical_workflow;
   if (
     contract?.contract !== "practical-v1" ||
@@ -313,6 +313,129 @@ if (metaVersion === "3.0") {
     contract.migration !== "explicit-owner-adoption"
   )
     r.error("Practical workflow must preserve bounded review cycles, stage approvals and explicit legacy adoption");
+}
+if (["3.1", "3.2"].includes(metaVersion)) {
+  for (const error of validateAssessmentProfile(graph.profiles?.assessment, metaVersion)) r.error(error);
+}
+
+export function validateAssessmentProfile(profile, version = "3.2") {
+  const errors = [];
+  if (
+    !profile ||
+    profile.workflow_mode !== "assessment" ||
+    profile.entry !== "scope" ||
+    profile.terminal !== "terminal"
+  )
+    return ["Missing explicit standalone assessment profile"];
+  if (!["3.1", "3.2"].includes(version)) errors.push("Unknown standalone assessment graph version");
+  if (version === "3.2") {
+    if (JSON.stringify(profile.bundle_contracts) !== JSON.stringify(["assessment-bundle-v1", "assessment-bundle-v2"]))
+      errors.push("Assessment graph must declare original and register-capable bundle contracts");
+    const expected = [
+      {
+        when: {
+          bundle_contract: "assessment-bundle-v2",
+          sources: ["azure", "combined"],
+          selection: "action_register",
+        },
+        outputs: [
+          "contracts/assessment-action-register.json",
+          "04-assessment-action-register.md",
+          "assets/04-assessment-action-register.xlsx",
+          "_meta/action-register-derived.json",
+          "_meta/action-register-export.json",
+        ],
+      },
+    ];
+    if (JSON.stringify(profile.nodes?.analysis?.conditional_produces) !== JSON.stringify(expected))
+      errors.push("Assessment register outputs must use the bounded contract/source/selection condition at analysis");
+  } else if (profile.bundle_contracts || Object.values(profile.nodes ?? {}).some((node) => node.conditional_produces)) {
+    errors.push("Register-capable output declarations require graph 3.2");
+  }
+  const nodes = profile.nodes ?? {};
+  const edges = Array.isArray(profile.edges) ? profile.edges : [];
+  const allowedAgents = new Set(["01-Orchestrator", "02-Requirements", "03-Architect", "04-Design"]);
+  for (const [id, node] of Object.entries(nodes)) {
+    if (node.id !== id || (node.agent && !allowedAgents.has(node.agent)))
+      errors.push(`Invalid assessment owner/node ${id}`);
+    for (const required of node.requires ?? []) {
+      if (!nodes[required]) errors.push(`Assessment prerequisite escapes profile: ${required}`);
+    }
+    if (id !== "analysis" && node.conditional_produces)
+      errors.push("Register output applicability belongs to analysis, not a new phase");
+    for (const output of [
+      ...(node.produces ?? []),
+      ...(node.conditional_produces ?? []).flatMap((group) => group.outputs ?? []),
+    ]) {
+      if (
+        typeof output !== "string" ||
+        output.split(/[\\/]/).some((part) => part === ".." || part.startsWith("assessment-step-"))
+      )
+        errors.push(`Reserved or unsafe assessment output ${output}`);
+    }
+  }
+  for (const edge of edges) {
+    if (!nodes[edge.from] || !nodes[edge.to]) errors.push("Assessment edge escapes profile");
+  }
+  if (edges.some((edge) => edge.from === "terminal") || nodes.terminal?.terminal !== true)
+    errors.push("Assessment must terminate without delivery routing");
+  const returns = profile.return_edges;
+  if (
+    !Array.isArray(returns) ||
+    returns.length !== 1 ||
+    returns[0].from !== "acceptance" ||
+    returns[0].to !== "review" ||
+    returns[0].condition !== "on_refine" ||
+    typeof returns[0].reason !== "string" ||
+    !returns[0].reason.trim()
+  )
+    errors.push("Assessment repair return must be owner-approved acceptance to review without reopening terminal");
+  if (
+    Object.entries(nodes)
+      .filter(([, node]) => node.type === "gate")
+      .map(([id]) => id)
+      .sort()
+      .join() !== "acceptance,scope"
+  )
+    errors.push("Assessment permits only scope and final acceptance gates");
+  for (const scenario of ["evidence_only", "requirements_led"]) {
+    const route = ["scope"];
+    while (route.at(-1) !== "terminal" && route.length <= Object.keys(nodes).length) {
+      const next = edges.filter((edge) => edge.from === route.at(-1) && (!edge.scenario || edge.scenario === scenario));
+      if (next.length !== 1 || route.includes(next[0]?.to)) break;
+      route.push(next[0].to);
+    }
+    const expected = [
+      "scope",
+      ...(scenario === "requirements_led" ? ["requirements"] : []),
+      "evidence",
+      "analysis",
+      "diagram",
+      "review",
+      "acceptance",
+      "terminal",
+    ];
+    if (JSON.stringify(route) !== JSON.stringify(expected)) errors.push(`Invalid assessment phase order: ${scenario}`);
+  }
+  const reviews = profile.reviews;
+  if (
+    reviews?.comprehensive?.artifact !== "02-architecture-assessment.md" ||
+    reviews?.comprehensive?.artifact_type !== "architecture" ||
+    reviews?.["cost-feasibility"]?.artifact !== "03-cost-management-report.md" ||
+    reviews?.["cost-feasibility"]?.artifact_type !== "cost-estimate" ||
+    Object.keys(reviews ?? {}).length !== 2
+  )
+    errors.push("Assessment must retain both existing independent review identities and exact report paths");
+  for (const [phase, outputs] of Object.entries({
+    requirements: ["01-requirements.md"],
+    evidence: ["01-assessment-brief.md", "contracts/assessment-evidence.json"],
+    analysis: ["02-architecture-assessment.md", "03-cost-management-report.md", "contracts/03-cost-management.json"],
+    diagram: ["assets/03-des-diagram.py", "assets/03-des-diagram.png", "assets/03-des-diagram.svg"],
+  })) {
+    if (JSON.stringify(nodes[phase]?.produces) !== JSON.stringify(outputs))
+      errors.push(`Assessment phase ${phase} changes the original mandatory bundle outputs`);
+  }
+  return errors;
 }
 
 // Validate top-level challenger block (introduced in 2.2)

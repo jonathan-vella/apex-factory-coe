@@ -38,11 +38,41 @@ independent cost-feasibility review and actual query counts.
 
 Parent-side model evaluation found agents hallucinating Azure SKU prices
 (e.g., AKS Standard at $0.60/hr instead of $0.10/hr) when writing from
-parametric knowledge. **ALL dollar figures in user-facing artifacts MUST
+parametric knowledge. **ALL retail-price estimates in user-facing artifacts MUST
 come from `cost-estimate-subagent` (Azure MCP `pricing_get` primary; constrained first-party API evidence fallback).**
-Never write a price that did not originate from a subagent response.
+Never write a retail price that did not originate from a subagent response.
+Standalone assessments may report actual spend and forecast returned by the authorized official
+Cost Management Query/Forecast APIs under
+`.github/skills/apex-azure-cost-optimization/SKILL.md`; preserve that source's scope, period, metric
+and currency. This is actual billing evidence, not parent-authored retail pricing. Do not send those
+queries to the retail leaf or substitute a retail estimate for an unavailable bill.
 
 ## Delegation Procedure (5 steps)
+
+### Unpriced assessment-only exit
+
+When scoped evidence contains no priceable resource (unknown SKU, quantity or required usage),
+an explicit `assessment_exit=assessment_only` may deliver cost as Not assessed. Record
+`assessment_cost_status=not_assessed` and write this exact project-local contract at
+`contracts/02-assessment-cost-status.json` (legacy root fallback remains supported):
+
+```json
+{
+  "status": "NOT_ASSESSED",
+  "reason": "No scoped resource has sufficient SKU, quantity and usage evidence.",
+  "evidence": ["_meta/01-discovered-evidence.json"]
+}
+```
+
+Reason and evidence locators must be nonempty. The existing cost Markdown must describe
+unpriced resources and missing evidence with no total, zero-cost claim, savings figure or
+numeric cost chart. Do not write `02-cost-estimate.json` for this path or weaken the pricing
+worker's COMPLETE/FAILED contract. Preserve actual prior failed attempts under `_meta/`;
+a failure or unavailable pricing tool is not proof that no resource is priceable.
+Freeze this status contract and its evidence as supporting inputs for both independent reviews.
+The gap-only cost report still requires the separate cost-feasibility review.
+Recall completion validates the status contract; no-priceable evidence never authorizes
+implementation continuation. All other paths retain the normal pricing gate below.
 
 1. **Prepare the pricing request and run preflight** — compile resource types, SKUs, region,
    and quantities from the upstream source, preserving each environment,

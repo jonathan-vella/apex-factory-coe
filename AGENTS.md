@@ -101,6 +101,14 @@ relevant validations before committing.
 
 ## Agent Workflow
 
+WAF-only requests use the explicit
+[standalone assessment profile](.github/skills/apex-workflow-engine/references/standalone-assessment.md):
+evidence-only or requirements-led intake, required WAF/diagram/cost bundle, upfront scope and final
+acceptance. Internal owner handoffs and both quality reviews are automatic within granted scope.
+Completed assessments have no next Governance or implementation owner. Existing project history and
+review allowances are preserved by explicit adoption, never inferred from new defaults.
+The numeric delivery table below applies to infrastructure delivery, not assessment routing.
+
 New recall projects use the [practical workflow](.github/skills/apex-workflow-engine/references/practical-workflow.md):
 existing stage approvals and independent lenses remain, with an initial and optional closure call
 per required artifact/lens inside actual granted scope. Legacy projects adopt explicitly; histories
@@ -163,8 +171,9 @@ hook and the `10-Challenger` review — agents do not call
 `agent-output/**` (see
 [`.github/instructions/agent-authoring.instructions.md`](.github/instructions/agent-authoring.instructions.md#no-direct-markdownlint-on-agent-output-rule)).
 
-`sku-manifest.{json,md}` is created at Step 1 (user pins only — empty
-`services[]` is the common case) and mutated through Step 7: Step 2
+`sku-manifest.{json,md}` is created at Step 1 (user pins and, for existing workloads,
+evidenced `observed-current` SKUs — empty `services[]` remains valid after preference capture)
+and mutated through Step 7: Step 2
 authoring, Step 3.5 read-only findings, Step 4 reconciliation +
 `requires[]` cross-check, Step 6 substitution on quota/region conflict
 (via the block-with-escalation pattern), Step 7 bidirectional drift

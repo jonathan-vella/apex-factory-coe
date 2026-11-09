@@ -119,6 +119,14 @@ function expandManifestServices(manifest, manifestUsage = {}) {
       for (const env of stampEnvs) {
         const envOverride = service.environment_overrides?.[env] ?? {};
         const effective = mergeSparseService(service, envOverride, stampSvcOverride);
+        if (
+          ["observed-current", "user-pin"].includes(effective.source) &&
+          (effective.capacity?.default === undefined || !effective.commitment?.type)
+        ) {
+          throw new Error(
+            `${effective.source === "user-pin" ? "User-pinned" : "Observed"} service '${service.id}' requires explicit capacity.default and commitment.type before pricing; unknown values cannot default to one instance or on-demand`,
+          );
+        }
         const regions =
           stamp && Array.isArray(stamp.regions) && stamp.regions.length > 0
             ? stamp.regions
@@ -142,6 +150,7 @@ function expandManifestServices(manifest, manifestUsage = {}) {
             source_kind: "manifest",
             environment: env,
             stamp: stamp?.id ?? null,
+            subscription: stamp?.subscription ?? service.subscription ?? null,
             service_name: effective.service,
             sku: effective.size,
             region,
@@ -216,6 +225,28 @@ function validateUsageEntry(lineName, serviceName, sku, usage) {
     }
   }
   return problems;
+}
+
+function assessmentPricingContext(input, mode, lines) {
+  if (input.assessment_basis === undefined) return {};
+  const basis = input.assessment_basis;
+  if (
+    mode !== "resource_list" ||
+    !basis ||
+    basis.cost_view !== "Retail" ||
+    !["period", "normalization", "tax", "licensing"].every(
+      (key) => typeof basis[key] === "string" && basis[key].trim(),
+    ) ||
+    !Array.isArray(input.assumptions) ||
+    input.assumptions.length === 0 ||
+    !input.assumptions.every((item) => typeof item === "string" && item.trim()) ||
+    !lines.every((line) =>
+      ["resource_id", "charge_id"].every((key) => typeof line[key] === "string" && line[key].trim()),
+    )
+  ) {
+    throw new Error("Assessment pricing requires resource_list identities, explicit retail basis and assumptions");
+  }
+  return { assessment_basis: structuredClone(basis), assumptions: [...input.assumptions] };
 }
 
 export function normalizeCostRequest(rawRequest, options = {}) {
@@ -306,6 +337,9 @@ export function normalizeCostRequest(rawRequest, options = {}) {
       usage: item.usage ?? null,
       meter_name: item.meter_name ?? null,
       upper_bound_ok: Boolean(item.upper_bound_ok),
+      ...Object.fromEntries(
+        ["resource_id", "charge_id"].filter((key) => item[key] !== undefined).map((key) => [key, item[key]]),
+      ),
     }));
   } else {
     if (!Array.isArray(rawRequest.candidate_sets) || rawRequest.candidate_sets.length === 0) {
@@ -353,6 +387,7 @@ export function normalizeCostRequest(rawRequest, options = {}) {
     estimated_query_groups: queryGroups.size,
     lines,
     recovery: rawRequest.recovery ?? null,
+    ...assessmentPricingContext(rawRequest, mode, lines),
   };
 }
 
@@ -540,6 +575,55 @@ export function calculateLineCost(line) {
   return null;
 }
 
+/** SKU rates and free grants may change without changing the evidenced consumption. */
+export function comparableLineUsage(line) {
+  const numeric = (value) => {
+    if (value === undefined || value === null) return null;
+    const text = String(value);
+    if (!/^\d+(?:\.\d+)?$/.test(text)) throw new Error("Invalid comparable consumption input");
+    const [whole, fraction = ""] = text.split(".");
+    const decimal = fraction.replace(/0+$/, "");
+    return `${BigInt(whole)}${decimal ? `.${decimal}` : ""}`;
+  };
+  const stable = (value) => {
+    if (Array.isArray(value))
+      return value.map(stable).sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+    if (value && typeof value === "object")
+      return Object.fromEntries(
+        Object.keys(value)
+          .sort()
+          .map((key) => [key, stable(value[key])]),
+      );
+    return typeof value === "number" || (typeof value === "string" && /^\d+(?:\.\d+)?$/.test(value))
+      ? numeric(value)
+      : value;
+  };
+  const project = (component, quantity, region) => ({
+    region: (component.region ?? region).toLowerCase(),
+    billing_region: component.billing_region?.toLowerCase() ?? null,
+    quantity: numeric(component.quantity ?? quantity),
+    unit: (component.unit_of_measure ?? component.unitOfMeasure ?? component.usage?.unit ?? "1 Hour")
+      .trim()
+      .toLowerCase()
+      .replace(/^1\s+/, "")
+      .replace(/\s+/g, " ")
+      .replace(/^(hours?|days?|months?)$/, (unit) => unit.replace(/s$/, "")),
+    usage_amount: numeric(component.usage_amount ?? component.usage?.amount),
+    usage_scope: component.usage_scope ?? component.usage?.scope ?? "per-instance",
+    usage: component.usage === undefined ? null : stable(component.usage),
+    hours_per_month: numeric(component.hours_per_month ?? HOURS_PER_MONTH),
+    billable_days: numeric(component.billable_days ?? DAYS_PER_MONTH),
+    unit_interpretation: component.unit_interpretation ?? null,
+    components: (component.components ?? [])
+      .map((item) => project(item, component.quantity ?? quantity, component.region ?? region))
+      .sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b))),
+  });
+  return {
+    ...project(line, 1, line.region),
+    calculation_basis: line.calculation_basis ? project(line.calculation_basis, line.quantity, line.region) : null,
+  };
+}
+
 function validateEvidenceReferences(estimate, cwd) {
   const errors = [];
   const entries = estimate.retail_api_evidence;
@@ -666,6 +750,11 @@ export function validateEstimate(estimate, options = {}) {
   if (!Array.isArray(estimate.resources)) {
     errors.push("resources must be an array");
     return { ok: false, errors, warnings };
+  }
+  try {
+    assessmentPricingContext(estimate, "resource_list", estimate.resources);
+  } catch (error) {
+    errors.push(error.message);
   }
 
   let hasUpperBound = false;
