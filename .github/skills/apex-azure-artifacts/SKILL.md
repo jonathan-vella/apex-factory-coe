@@ -21,6 +21,16 @@ and completion; templates never advance a step or authorize an operation.
 
 ## Rules
 
+For `workflow_mode=assessment`, use [standalone assessment](../apex-workflow-engine/references/standalone-assessment.md):
+`templates/01-assessment-brief.template.md`, the existing WAF template and
+`templates/03-cost-management-report.template.md`. The root is Markdown-only; normalized cost evidence
+lives in `contracts/03-cost-management.json`. Do not require a deployment SKU manifest or synthesize
+business requirements in evidence-only mode. Keep report coverage separate from acceptance.
+Register-capable runs also use
+[Assessment Action Register](references/assessment-action-register.md) and
+`templates/04-assessment-action-register.template.md`: one validated source generates Excel and Markdown.
+The register is nonbinding financial-impact reporting, not an implementation gate.
+
 ### Mandatory Compliance
 
 | Rule                  | Requirement                                         |
@@ -56,7 +66,9 @@ After saving step artifact(s), update the README:
 1. Reflect verified graph/session status in `## ✅ Workflow Progress`; a write alone is not completion
 2. Add artifact files to `## 📄 Generated Artifacts`
 3. Update `Last Updated` and derive progress from current required/optional graph nodes,
-   including Governance. Partial output, pending reviews and approval remain incomplete.
+   including Governance for delivery mode. Standalone assessments use only their selected profile
+   and terminate after accepted report/diagram/cost bundle; no pending Governance progress bar.
+   Partial output, pending reviews and approval remain incomplete.
 
 ## Steps
 

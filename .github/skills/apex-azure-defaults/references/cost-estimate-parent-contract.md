@@ -29,6 +29,57 @@ model/tools and require explicit selection of the owning agent.
 
 ## Pricing Accuracy Gate (HARD)
 
+### Product documentation and publication
+
+Exact-byte capture of native retail API responses is required for meter/rate validation.
+It does not require archiving whole product-documentation or commercial pricing pages in Git.
+For billing inclusions, exemptions and applicability, the parent retains a documentation reference containing:
+
+- `source_url`: the actual fetched source URL, not one inferred from the filename or title.
+- `retrieved_at`: the actual retrieval timestamp.
+- `title`: the source document title.
+- `billing_conclusion`: a short original paraphrase of the relevant billing rule, not copied page text or rates.
+- `applicability`: the exact SKU, region, traffic or endpoint conditions checked.
+- `limitations`: unresolved applicability, missing inputs and any assumptions.
+
+Collect only missing applicable documentation; reuse current references. An unavailable source or unproven exemption
+remains an explicit limitation, never a free-charge assumption. Documentation does not replace native retail-rate evidence.
+Provide these references to the pricing leaf; do not make full-page copies a pricing or review prerequisite.
+Full-text research captures, when necessary and authorized, stay in an owner-controlled private location outside the
+repository. Public accessibility is not redistribution permission. Any separately proposed redistribution needs the actual
+source, applicable license/permission and attribution established before publication; do not generalize a Learn license
+to commercial pricing pages. Do not copy native web-fetch offloads into project artifacts by default.
+
+For an existing review-bound full-page capture, obtain owner authorization for evidence repair. Preserve the original
+privately and publish an explicitly labelled provenance notice or original summary, never a pretend native response.
+Record the original digest and any unknown source/date without inventing metadata. Keep historical review records and
+hashes unchanged, record the evidence change through recall, and require affected-owner revalidation and independent
+review under existing allowances before using the changed evidence for current approval. Do not reset budgets,
+restamp reviews, infer renewed approval or silently remove protected inputs.
+
+### Monthly estimates and indicative rate quotes
+
+Default request `purpose` is `monthly-estimate`; new publications use evidence-backed `cost-estimate-v2`.
+Persist the complete original request before dispatch and pass its actual `request_path`.
+Preflight creates the immutable request binding; keep the original file read-only for publication and reuse.
+Ask only for genuinely missing billing inputs before dispatch. Preserve actual captured usage and do not infer
+application transfer from storage size, telemetry ingestion, gateway traffic or a pricing example.
+Preflight must identify missing required dimensions before any queries.
+
+When the user explicitly requests unit rates with unknown monthly usage, dispatch the same pricing owner with
+`purpose: "rate-quote"` and a distinct output path. `retail-rate-quote-v1` retains native units, exact meters,
+complete applicable tier bands and current source provenance; it has no workload monthly/yearly total.
+No new pricing agent, permission, allowance or parametric source is introduced.
+Rate-quote completion permits reporting indicative rates only. It never authorizes manifest writeback, a full
+Architecture estimate, cost-feasibility approval, spending or deployment. Ordinary estimate validation must reject
+quote artifacts regardless of their `COMPLETE` status.
+
+Recovery reuses the saved request/evidence ledger rather than reconstructing it from chat summaries.
+Verify every amount against selected native records, raw-response hashes and deterministic calculations;
+matching a meter ID alone is insufficient. Every issued/failed request remains consumed, and uncertain interrupted
+reservations remain visible. Missing capability or capture permission is a precise blocker, not a catalog outage.
+Explicit legacy audit can inspect historical estimates but cannot manufacture missing source evidence or currentness.
+
 For adopted practical projects, evidence-equivalent scenario arithmetic may use the existing
 deterministic `cost-estimate.mjs scenarios` command over the pricing owner's current verified
 output. This is not parent-authored pricing: rates and calculation bases retain provenance,
@@ -38,11 +89,41 @@ independent cost-feasibility review and actual query counts.
 
 Parent-side model evaluation found agents hallucinating Azure SKU prices
 (e.g., AKS Standard at $0.60/hr instead of $0.10/hr) when writing from
-parametric knowledge. **ALL dollar figures in user-facing artifacts MUST
+parametric knowledge. **ALL retail-price estimates in user-facing artifacts MUST
 come from `cost-estimate-subagent` (Azure MCP `pricing_get` primary; constrained first-party API evidence fallback).**
-Never write a price that did not originate from a subagent response.
+Never write a retail price that did not originate from a subagent response.
+Standalone assessments may report actual spend and forecast returned by the authorized official
+Cost Management Query/Forecast APIs under
+`.github/skills/apex-azure-cost-optimization/SKILL.md`; preserve that source's scope, period, metric
+and currency. This is actual billing evidence, not parent-authored retail pricing. Do not send those
+queries to the retail leaf or substitute a retail estimate for an unavailable bill.
 
 ## Delegation Procedure (5 steps)
+
+### Unpriced assessment-only exit
+
+When scoped evidence contains no priceable resource (unknown SKU, quantity or required usage),
+an explicit `assessment_exit=assessment_only` may deliver cost as Not assessed. Record
+`assessment_cost_status=not_assessed` and write this exact project-local contract at
+`contracts/02-assessment-cost-status.json` (legacy root fallback remains supported):
+
+```json
+{
+  "status": "NOT_ASSESSED",
+  "reason": "No scoped resource has sufficient SKU, quantity and usage evidence.",
+  "evidence": ["_meta/01-discovered-evidence.json"]
+}
+```
+
+Reason and evidence locators must be nonempty. The existing cost Markdown must describe
+unpriced resources and missing evidence with no total, zero-cost claim, savings figure or
+numeric cost chart. Do not write `02-cost-estimate.json` for this path or weaken the pricing
+worker's COMPLETE/FAILED contract. Preserve actual prior failed attempts under `_meta/`;
+a failure or unavailable pricing tool is not proof that no resource is priceable.
+Freeze this status contract and its evidence as supporting inputs for both independent reviews.
+The gap-only cost report still requires the separate cost-feasibility review.
+Recall completion validates the status contract; no-priceable evidence never authorizes
+implementation continuation. All other paths retain the normal pricing gate below.
 
 1. **Prepare the pricing request and run preflight** — compile resource types, SKUs, region,
    and quantities from the upstream source, preserving each environment,
@@ -79,11 +160,14 @@ Never write a price that did not originate from a subagent response.
    or restamp reused rates. Reuse preserves the independent cost-feasibility review.
    Invoke with:
    - `manifest_path` (+ optional `manifest_usage`, `supplemental_resources[]`) or `resource_list`, `project_name`, `region`
+   - `request_path`: exact caller-owned original JSON used by preflight, publication and current validation
    - `output_path` = `agent-output/{project}/<artifact>-cost-estimate.json`
      (per-agent: `02-cost-estimate.json` for 03, `07-ab-cost-estimate.json` for 08)
    - `overwrite` = `false` (set to `true` only when re-running after revisions)
    - Optional: `compare_regions: true`, `include_ri_savings: true`
-   The worker may create request/evidence files under `{output_path}.retail-evidence/` for the
+   The worker may create durable query ledgers, exact captured MCP responses and fallback request/evidence files
+   under `{dirname(output_path)}/pricing-evidence/` (or `{output_path}.retail-evidence/`). Use only the sanctioned capture/helper commands, not arbitrary terminal copies.
+   This also supports the
    [constrained direct-API fallback](pricing-guidance.md#constrained-direct-api-fallback).
    Preserve failed attempts and evidence; never instruct the worker to relabel direct API records as MCP output.
 3. **Receive the compact summary** — the subagent writes the full JSON
@@ -96,9 +180,9 @@ Never write a price that did not originate from a subagent response.
 4. **Read the JSON file** from `output_path` to populate your
    step-owned artifact(s). Copy figures **verbatim** — do NOT round,
    adjust, or "correct" them.
-5. **Cross-check totals** — verify that the sum of
-   `resources[].monthly_cost` equals `monthly_total`. Flag any
-   discrepancy to the user before proceeding to the next phase.
+5. **Validate evidence and totals** — run the ordinary current-result validator, including request coverage,
+   immutable meter evidence, freshness, calculation basis and sums. A shape-only check or matching total is insufficient.
+   Flag discrepancies before proceeding; do not convert a rate quote into a complete monthly estimate.
 
 ## Candidate-set calls
 

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 import path from "node:path";
+import { randomUUID } from "node:crypto";
 import { fileURLToPath } from "node:url";
 
 const choice = (title, description, options) => ({
@@ -28,6 +29,20 @@ const patterns = [
   "Development / test platform",
   "Not sure — guide me",
 ];
+const scenarioTerm =
+  "(?:(?:a|an|any)\\s+)?(?:greenfield|migrat\\w*|moderni[sz]\\w*|lift[\\s-]and[\\s-]shift|assess\\w*|existing|brownfield)\\b";
+const negatedScenarioTypes = new RegExp(
+  `\\b(?:no|not|without)\\s+${scenarioTerm}(?:\\s*(?:,|and|or|nor)\\s*${scenarioTerm})*`,
+  "gi",
+);
+
+function positiveScenarioText(value) {
+  return String(value ?? "").replace(negatedScenarioTypes, "");
+}
+
+function isAssessmentScenario(value) {
+  return /\bassess\w*\b/i.test(positiveScenarioText(value));
+}
 
 export const DISCOVERY_STAGES = ["business", "migration", "workload", "access"];
 
@@ -41,16 +56,178 @@ export function answersFromRecall(view, environment) {
   );
 }
 
-export function buildDiscoveryForm(stage, answers = {}) {
+function evidenceDefaults(evidence) {
+  if (evidence === undefined) return {};
+  if (!evidence || typeof evidence !== "object" || !Array.isArray(evidence.items)) {
+    throw new Error("Evidence must be an object containing an items array");
+  }
+  const defaults = {};
+  for (const item of evidence.items) {
+    if (
+      !item ||
+      typeof item.input_id !== "string" ||
+      !/^[A-Za-z0-9_.-]+$/.test(item.input_id) ||
+      !supplied(item.value) ||
+      !["iac", "diagram", "azure-arg"].includes(item.provenance) ||
+      !["observed", "inferred"].includes(item.confidence)
+    ) {
+      throw new Error("Evidence items require input_id, value, provenance and confidence");
+    }
+    if (Object.hasOwn(defaults, item.input_id)) {
+      throw new Error(`Ambiguous evidence: duplicate input_id ${item.input_id}`);
+    }
+    Object.defineProperty(defaults, item.input_id, { value: structuredClone(item.value), enumerable: true });
+  }
+  return defaults;
+}
+
+function discoveryEnvelope(stage, answers, properties, message) {
+  const pending = Object.keys(properties);
+  return {
+    stage,
+    complete: pending.length === 0,
+    ...(pending.length
+      ? {
+          request_id: `requirements-${randomUUID()}`,
+          request_id_source: "apex-local",
+          context: {
+            answers: structuredClone(answers),
+            fields: Object.fromEntries(pending.map((key) => [key, { input_id: key, kind: "input" }])),
+          },
+        }
+      : {}),
+    form: pending.length ? { message, requestedSchema: { properties } } : null,
+  };
+}
+
+export function buildDiscoveryForm(stage, answers = {}, evidence, options = {}) {
   if (!DISCOVERY_STAGES.includes(stage)) throw new Error(`Unknown discovery stage: ${stage}`);
   if (!answers || typeof answers !== "object" || Array.isArray(answers)) {
     throw new Error("Answers must be an object containing the complete captured answer ledger");
   }
+  const assessmentMode = options.assessmentMode;
+  if (assessmentMode !== undefined && !["evidence_only", "requirements_led"].includes(assessmentMode)) {
+    throw new Error("Assessment mode must be evidence_only or requirements_led");
+  }
+  if (assessmentMode !== undefined) {
+    const properties = {};
+    if (assessmentMode === "requirements_led" && stage === "business") {
+      const inputs = [
+        [
+          "business_objective",
+          "Business purpose",
+          "Which business outcomes and priorities should the assessment evaluate?",
+          ["Reliability and recovery", "Security posture", "Cost efficiency", "Operational readiness"],
+        ],
+        [
+          "critical_flows",
+          "Critical workload flows",
+          "Which user journeys or integrations matter most?",
+          ["Employee access", "Customer transactions", "Data processing and integrations", "Monitoring and support"],
+        ],
+        [
+          "availability_target",
+          "Availability objective",
+          "What availability target is known?",
+          ["99.9%", "99.95%", "99.99%"],
+        ],
+        [
+          "recovery_profile",
+          "Recovery objectives",
+          "What recovery time and data-loss objectives are known?",
+          ["RTO 4 hours / RPO 1 hour", "RTO 24 hours / RPO 24 hours"],
+        ],
+        [
+          "performance_target",
+          "Performance and scale objectives",
+          "What response-time, throughput or peak-demand targets are known?",
+          [],
+        ],
+        [
+          "compliance",
+          "Compliance and residency constraints",
+          "Which frameworks, data residency or security obligations are known?",
+          ["No specific regulatory framework", "EU residency / GDPR", "Organization-specific constraints"],
+        ],
+        [
+          "monthly_budget_amount",
+          "Cost planning target",
+          "Is a cost target known? This is not a spending approval or a hard-cap decision.",
+          ["No fixed budget"],
+        ],
+      ];
+      for (const [key, title, description, suggestions] of inputs) {
+        if (!supplied(answers[key])) {
+          properties[key] = choice(title, `${description} Unknown is a valid assessment input.`, [
+            ...suggestions,
+            "Unknown — assess with available evidence",
+          ]);
+        }
+      }
+    }
+    return discoveryEnvelope(
+      stage,
+      answers,
+      properties,
+      "Assessment business context: supply only known objectives, or choose Unknown. No implementation choice or intermediate approval is requested.",
+    );
+  }
+  const defaults = evidenceDefaults(evidence);
+  const assessmentFromAnswers = isAssessmentScenario(answers.scenario);
+  const assessmentSuggestedByEvidence = !supplied(answers.scenario) && isAssessmentScenario(defaults.scenario);
   const properties = {};
   const add = (key, field) => {
-    if (!supplied(answers[key])) properties[key] = field;
+    if (supplied(answers[key])) return;
+    if (Object.hasOwn(defaults, key)) {
+      const value = defaults[key];
+      if (
+        (field.type === "string" && typeof value !== "string") ||
+        (field.type === "array" && (!Array.isArray(value) || !value.every((item) => typeof item === "string")))
+      ) {
+        throw new Error(`Evidence value for ${key} does not match question type ${field.type}`);
+      }
+      field.default = value;
+      field.description += " Suggested from discovered evidence; explicitly confirm or correct this value.";
+    }
+    properties[key] = field;
   };
-  if (stage === "business") {
+  if (assessmentFromAnswers && stage !== "business") {
+    return { stage, complete: true, form: null };
+  }
+  if (stage === "business" && (assessmentFromAnswers || assessmentSuggestedByEvidence)) {
+    add(
+      "system_description",
+      choice("Workload in scope", "Describe the existing service or workload being assessed.", patterns),
+    );
+    add(
+      "business_objective",
+      choice("Assessment objective", "What should this assessment clarify?", [
+        "Understand current Well-Architected posture and evidence gaps",
+        "Compare current state with organizational objectives",
+        "Investigate a known reliability, security or cost concern",
+        "Identify a prioritized improvement roadmap",
+        "Not sure — help define the assessment scope",
+      ]),
+    );
+    add(
+      "scenario",
+      choice("Project scenario", "Confirm that this is an assessment of an existing workload.", [
+        "Assessment — evaluate an existing workload",
+        "Not sure — guide me",
+      ]),
+    );
+    add(
+      "target_environments",
+      multiple("In-scope environments", "Which existing environments are included in this assessment?", [
+        "dev",
+        "test",
+        "staging",
+        "prod",
+        "sandbox",
+        "Not sure yet",
+      ]),
+    );
+  } else if (stage === "business") {
     add(
       "industry",
       choice("Industry", "Which sector best matches the organization?", [
@@ -101,6 +278,7 @@ export function buildDiscoveryForm(stage, answers = {}) {
         "Greenfield — new workload",
         "Migration — move an existing workload",
         "Modernization — improve an existing workload",
+        "Assessment — evaluate an existing workload",
         "Extension — add to an existing platform",
         "Not sure — guide me",
       ]),
@@ -131,15 +309,16 @@ export function buildDiscoveryForm(stage, answers = {}) {
     if (!supplied(answers.scenario)) {
       throw new Error("Migration discovery requires the captured scenario; restore the business answer ledger first");
     }
-    const scenario = String(answers.scenario).trim();
-    const scenarioTerm = "(?:(?:a|an|any)\\s+)?(?:greenfield|migrat\\w*|moderni[sz]\\w*|lift[\\s-]and[\\s-]shift)\\b";
-    const negatedTypes = new RegExp(
-      `\\b(?:no|not|without)\\s+${scenarioTerm}(?:\\s*(?:,|and|or|nor)\\s*${scenarioTerm})*`,
-      "gi",
-    );
-    const changes = scenario.replace(negatedTypes, "");
+    const changes = positiveScenarioText(answers.scenario);
     const isGreenfield = /\bgreenfield\b/i.test(changes);
-    if (!isGreenfield && /\b(?:migrat\w*|moderni[sz]\w*|lift[\s-]and[\s-]shift)\b/i.test(changes)) {
+    const extensionOnly =
+      /\b(?:extend\w*|extension)\b/i.test(changes) &&
+      !/\b(?:migrat\w*|moderni[sz]\w*|lift[\s-]and[\s-]shift|assess\w*|brownfield)\b/i.test(changes);
+    if (
+      !isGreenfield &&
+      !extensionOnly &&
+      /\b(?:migrat\w*|moderni[sz]\w*|lift[\s-]and[\s-]shift|assess\w*|existing|brownfield)\b/i.test(changes)
+    ) {
       add(
         "current_platform",
         choice("Current platform", "Where does the existing workload run?", [
@@ -153,7 +332,7 @@ export function buildDiscoveryForm(stage, answers = {}) {
       );
       add(
         "pain_points",
-        multiple("What needs to improve?", "Select the reasons for this migration or modernization.", [
+        multiple("What needs to improve?", "Select the reasons for this migration, modernization or assessment.", [
           "Cost",
           "Reliability / downtime",
           "Performance / scale",
@@ -379,30 +558,18 @@ export function buildDiscoveryForm(stage, answers = {}) {
       ]),
     );
   }
-  return {
+  return discoveryEnvelope(
     stage,
-    complete: Object.keys(properties).length === 0,
-    ...(Object.keys(properties).length
-      ? {
-          context: {
-            answers: structuredClone(answers),
-            fields: Object.fromEntries(Object.keys(properties).map((key) => [key, { input_id: key, kind: "input" }])),
-          },
-        }
-      : {}),
-    form: Object.keys(properties).length
-      ? {
-          message: `Requirements discovery: ${stage}. Choose suggested answers or type a custom value in the same field. “Not sure” is valid; no architecture or deployment is approved.`,
-          requestedSchema: { properties },
-        }
-      : null,
-  };
+    answers,
+    properties,
+    `Requirements discovery: ${stage}. Choose suggested answers or type a custom value in the same field. “Not sure” is valid; no architecture or deployment is approved.`,
+  );
 }
 
 export function runDiscovery(argv = process.argv.slice(2)) {
   if (argv.includes("--help")) {
     console.log(
-      "Usage: requirements-discovery.mjs --stage business|migration|workload|access [--answers <captured-answers.json>]",
+      "Usage: requirements-discovery.mjs --stage business|migration|workload|access [--answers <captured-answers.json> | --recall-view <view.json> --environment <env>] [--evidence <01-discovered-evidence.json>] [--assessment-mode evidence_only|requirements_led]\nStandalone assessment modes bypass implementation questionnaires; requirements_led asks only known business targets, accepting Unknown.\nPersist the envelope and its APEX-local request_id before displaying only form through ask_user; retain the ID with the actual response. No SDK-issued request ID is required.\nEvidence: {items:[{input_id,value,provenance:iac|diagram|azure-arg,confidence:observed|inferred}]}. Suggestions require explicit owner confirmation before recording material inputs.",
     );
     return 0;
   }
@@ -410,6 +577,8 @@ export function runDiscovery(argv = process.argv.slice(2)) {
   let answers = {};
   let recallView;
   let environment;
+  let evidence;
+  let assessmentMode;
   let answersProvided = false;
   for (let index = 0; index < argv.length; index += 2) {
     const value = argv[index + 1];
@@ -420,13 +589,15 @@ export function runDiscovery(argv = process.argv.slice(2)) {
       answersProvided = true;
     } else if (argv[index] === "--recall-view") recallView = JSON.parse(fs.readFileSync(path.resolve(value), "utf8"));
     else if (argv[index] === "--environment") environment = value;
+    else if (argv[index] === "--evidence") evidence = JSON.parse(fs.readFileSync(path.resolve(value), "utf8"));
+    else if (argv[index] === "--assessment-mode") assessmentMode = value;
     else throw new Error(`Unknown option: ${argv[index]}`);
   }
   if (recallView) {
     if (answersProvided) throw new Error("Use captured answers or an authoritative recall view, not both");
     answers = answersFromRecall(recallView, environment);
   } else if (environment) throw new Error("--environment requires --recall-view");
-  console.log(JSON.stringify(buildDiscoveryForm(stage, answers), null, 2));
+  console.log(JSON.stringify(buildDiscoveryForm(stage, answers, evidence, { assessmentMode }), null, 2));
   return 0;
 }
 

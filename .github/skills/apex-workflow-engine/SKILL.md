@@ -30,10 +30,20 @@ reads instead of relying on hardcoded step logic.
 
 ## Prerequisites
 
+Explicit WAF-only requests use the graph's standalone assessment profile and
+[standalone assessment contract](references/standalone-assessment.md). Its scope authorization
+and final bundle acceptance replace intermediate delivery gates; mandatory diagram and both reviews
+remain. Recall's assessment lifecycle enforces order and terminal handoff before numeric-step routing.
+Do not automatically adopt existing projects or treat assessment acceptance as deployment authority.
+
 Graph 3.0 adds the [practical contract](references/practical-workflow.md) for new
 projects; known 2.x project semantics remain readable until explicit owner adoption.
 Specialists and stage approvals are unchanged. Preliminary policy feasibility is
 collection before Architecture approval, not early completion of Governance.
+New delivery projects additionally use the
+[policy-source contract](../apex-azure-governance-discovery/references/policy-source.md):
+explicit shared Corp assumptions can support Architecture; target-verified evidence remains mandatory
+before implementation completion. Existing projects adopt through an actual source choice, not source-file updates.
 
 Use the graph and `apex-recall show <project> --json` together. If the returned
 `session` is empty, initialize or recover the project within the active owner's scope before routing.

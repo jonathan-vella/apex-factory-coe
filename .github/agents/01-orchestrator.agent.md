@@ -35,10 +35,26 @@ than repeating their production to satisfy an administrative phase boundary.
 
 ## Interaction
 
+For explicit `decisions.workflow_mode=assessment`, load
+[standalone assessment](../skills/apex-workflow-engine/references/standalone-assessment.md) and follow its
+graph-selected lifecycle instead of the numeric delivery steps below. Capture scope/access once (including
+optional `scope.rg_attribution` for shared, workload or excluded resource groups); run
+Requirements only in requirements-led mode, then analysis, mandatory Design diagram and both reviews
+before one final bundle acceptance. Assessment completion is terminal, never a Governance/IaC handoff.
+Do not manufacture Step 1/2 approvals or start deployment phases for this profile.
+For register-capable Azure/combined runs, include the
+[Assessment Action Register](../skills/apex-azure-artifacts/references/assessment-action-register.md)
+Excel/Markdown exports in the same final bundle. IaC export remains optional; legacy runs retain their
+captured output contract. No additional approval, implementation step or review allowance is introduced.
+
 For `decisions.workflow_contract=practical-v1`, follow the
 [practical workflow](../skills/apex-workflow-engine/references/practical-workflow.md).
 Retain stage approvals; batch granted mechanical repairs and ordinary closure verification.
 Legacy per-finding administrative questions and per-step ceiling snippets below apply only to legacy projects.
+Use the [complete-stage work package](../skills/apex-workflow-engine/references/practical-workflow.md#complete-stage-work-package):
+scope reconciliation, owned updates and required bounded reviews together at the existing stage/start interaction.
+Include an expected later target-policy follow-up only with actual bounded owner authorization; record it through
+existing phase/extension APIs when its final inputs are ready. Do not make the user operate counters or prepare files.
 
 Before direct display or delegated return, apply the
 [shared question-form checks](../copilot-instructions.md#user-question-forms):
@@ -62,6 +78,10 @@ Never send only the latest form answers and make the specialist rediscover earli
 Before displaying a returned form, omit answered/inapplicable fields and preserve guided options.
 `requestedSchema` contains only `properties`, without root `type`, `required` or `additionalProperties`.
 Pass only `message` and `requestedSchema` to `ask_user`; retain request ID, phase and missing-input metadata here.
+The request ID is an APEX correlation key, not a required SDK return value. Preserve the producer's ID and
+actual answer receipt; recover existing answers through
+[input request provenance](../skills/apex-workflow-engine/references/practical-workflow.md#input-request-provenance).
+Do not block solely on absent native IDs, repeat settled questions or infer approval from a local capture ID.
 Return malformed forms to the producer for correction before invoking `ask_user`; do not re-ask settled answers.
 Allow one schema-only correction for the same request; another malformed response blocks with its validation error.
 Custom guidance in a finding field already supplies its decision note. Ask a finding-specific follow-up only
@@ -104,7 +124,9 @@ Only a genuinely new project uses `apex-recall init <project> --json`.
 Load `.github/skills/apex-workflow-engine/SKILL.md` for domain prerequisites and
 `.github/skills/apex-azure-artifacts/SKILL.md` before writing summaries/lessons.
 Load Azure defaults only when recording or evaluating an actual Azure default.
-Do not preload all specialist skills or ask architecture questions before Requirements.
+Do not preload all specialist skills or ask architecture questions before Requirements in delivery mode.
+In standalone evidence-only mode, use the authorized assessment brief and dispatch Architect without
+a Requirements artifact; requirements-led mode captures business context without an intermediate gate.
 Requirements owns `decisions.iac_tool`; do not infer it from the requested agent.
 
 Initialization is not the end of an explicit start/new-project request. When already selected as
@@ -119,10 +141,15 @@ Any template region is an unconfirmed fallback until the user supplies or confir
 
 ## Native delegation
 
-For practical projects after Gate 1, route an authorized preliminary policy-feasibility task to
-`04g-Governance` before final Architecture approval. Reuse captured target/read scope. This is
-collection only, not Step 3.5 completion or permission to change Azure. No target means provisional
-architecture, not production readiness. Reuse the current snapshot at formal Governance.
+For practical projects after Gate 1, resolve the
+[policy source](../skills/apex-azure-governance-discovery/references/policy-source.md) before Architecture:
+reuse current tenant evidence or ask once for explicit standard Corp-assumption acceptance.
+The assumed route requires no target identifiers or manually prepared JSON; record it through `policy-source`.
+Only the selected tenant route captures missing native target/read inputs and dispatches authorized
+preliminary collection to `04g-Governance`. Use managed private scope capture for anonymous artifacts;
+never invent an external-file preparation task or repeat settled authorization.
+Collection does not complete Step 3.5 or grant Azure writes. Assumed Architecture remains tenant-unverified;
+new-contract planning completion, CodeGen and deployment require current target evidence.
 
 Use actual native selection/calling context; if unavailable, report the role as unknown.
 Do not describe default-agent coordination as selected `01-Orchestrator` or use prose to acquire permissions.
@@ -143,6 +170,10 @@ to an optional candidate.
 Distinguish a full-phase request from an explicitly bounded research/repair slice;
 filenames alone do not define success.
 Record a pending phase's actual start through recall; resume existing progress without forced restart or backdating.
+For `corp-policy-v1`, capture the authorized CodeGen/deployment phase scope, including policy/read inputs and
+target environments, before `start-step` or transition. Reuse the actual granted stage/start approval; do not
+copy earlier-step authority or let DEV evidence authorize PROD. Private policy-backed reviews must freeze the
+opaque supporting set and use only preflight-resolved private read locations under the policy-source contract.
 
 - `execution_mode: delegated`, project, step/phase, objective and exact input paths/revisions;
 - current answers, unresolved decisions, approved side effects and allowed output paths;
@@ -155,6 +186,13 @@ File presence or JSON syntax is not full-phase completion. Validate required evi
 For Architecture approval, require actual pricing JSON with status `COMPLETE`,
 its existing cost validator/freshness checks,
 and both independent reviews; do not accept parent-authored dollar ranges or a success summary as substitutes.
+The sole no-pricing exception is an explicit assessment-only exit with
+`assessment_cost_status=not_assessed`: validate the NOT_ASSESSED contract and gap-only report
+under the [unpriced assessment contract](../skills/apex-azure-defaults/references/cost-estimate-parent-contract.md#unpriced-assessment-only-exit),
+retain both current independent reviews, and show cost as unknown without numeric charts.
+Persist the owner's `assessment_exit=assessment_only` choice before completing Step 2.
+Implementation continuation must select `assessment_exit=implementation` and revalidate policy
+feasibility and actual COMPLETE pricing; assessment-only acceptance supplies neither.
 For a partial result, continue only the remaining authorized work through its owner using the supported task lifecycle.
 Relay genuinely missing material inputs, actual capability failures or the final human gate; do not end routine
 in-phase work merely because drafts exist. Preserve budgets and stop unchanged, ineffective retries.
@@ -190,7 +228,10 @@ do not call that an unavailable reviewer or send the user through a fresh manual
 Do not reconstruct a review, request predetermined approval, retry a valid completed review,
 or dispatch the manual Challenger wrapper as a fallback.
 Missing/empty reviewer output permits one identical-input retry within the existing budget.
-Preserve default/deep invocation ceilings, Governance's stricter cap and any exhausted allowance.
+For practical projects, the per-artifact/lens `review_cycles` ledger is authoritative, including its actual
+initial/closure/extension allowance. Do not apply a second legacy per-step ceiling.
+Legacy projects retain their default/deep invocation ceilings and Governance's stricter cap.
+Preserve every exhausted allowance until an actual bounded extension is granted.
 Changing a worker, context or backend resets neither findings nor attempts.
 
 At a boundary:
@@ -218,6 +259,11 @@ At a boundary:
 
 ### Challenger-invocation ceiling
 
+For `practical-v1`, use the current artifact/lens cycle, exact recorded calls and explicit bounded extensions only.
+Do not also gate that dispatch with `decisions.challenger_invocations_<step>`. An exhausted valid current review
+needs no new call; reuse it. Stale inputs return to their owner; batch only actually needed recovery authority.
+
+The following per-step rule is **legacy-only**:
 Preserve `decisions.challenger_invocations_<step>` before each new independent review:
 default ceiling 2, deep ceiling 4, with Governance's stricter one-pass allowance.
 At exhaustion ask the real owner using "Accept findings", "Override ceiling" or "Abort step";
