@@ -80,6 +80,19 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     # start-step
+    p_assessment = sub.add_parser("assessment", help="Standalone assessment lifecycle (not delivery steps)")
+    p_assessment.add_argument("project")
+    p_assessment.add_argument("--action", required=True, choices=("start", "advance", "accept", "adopt", "revise"))
+    p_assessment.add_argument(
+        "--request",
+        default="{}",
+        metavar="PATH_OR_JSON",
+        help="JSON request file (e.g. _meta/assessment-start.json); inline JSON also accepted",
+    )
+    p_assessment.add_argument("--phase", default=None, help="Current graph phase to complete")
+    p_assessment.add_argument("--dry-run", action="store_true")
+    p_assessment.add_argument("--json", action="store_true")
+
     p_start = sub.add_parser("start-step", help="Mark a step as in_progress")
     p_start.add_argument("project", help="Project name")
     p_start.add_argument("step", help="Step key (1, 2, 3, 3_5, 4, 5, 6, 7)")
@@ -143,6 +156,21 @@ def build_parser() -> argparse.ArgumentParser:
         "--review-extension", type=Path, help="Explicit bounded extension of an existing review cycle"
     )
 
+    p_policy = sub.add_parser("policy-source", help="Capture an actual policy-source choice or private read scope")
+    p_policy.add_argument("project")
+    p_policy.add_argument("--assumed-corp", action="store_true", help="Record explicit Corp-assumption acceptance")
+    p_policy.add_argument("--tenant", help="Non-secret tenant ID from the actual native response")
+    p_policy.add_argument("--subscription", action="append", help="Explicit subscription ID; repeat for each target")
+    p_policy.add_argument("--authorize-policy-read", action="store_true", help="Record actual scoped read consent")
+    p_policy.add_argument("--owner")
+    p_policy.add_argument("--request-id")
+    p_policy.add_argument("--environment", action="append", choices=["dev", "test", "staging", "prod", "sandbox"])
+    p_policy.add_argument("--show-private-scope", action="store_true", help="Resolve existing private paths, not IDs")
+    p_policy.add_argument(
+        "--verify-tenant", action="store_true", help="Check current CLI tenant against captured scope"
+    )
+    p_policy.add_argument("--json", action="store_true")
+
     # finding
     p_finding = sub.add_parser("finding", help="Manage open_findings")
     p_finding.add_argument("project", help="Project name")
@@ -174,7 +202,11 @@ def build_parser() -> argparse.ArgumentParser:
     p_ra.add_argument("--skip-reason", action="append", default=None, help="Skip reason (repeatable)")
     p_ra.add_argument("--json", action="store_true", help="Output as JSON")
     p_ra.add_argument("--attempt-id", default=None, help="Caller-assigned durable attempt identity")
-    p_ra.add_argument("--attempt-kind", choices=["invocation", "repair", "empty-output-retry"], default=None)
+    p_ra.add_argument(
+        "--attempt-kind",
+        choices=["invocation", "repair", "empty-output-retry", "publication-retry"],
+        default=None,
+    )
     p_ra.add_argument("--input-digest", default=None, help="SHA-256 of the frozen input set")
     p_ra.add_argument(
         "--attempt-input",
@@ -315,6 +347,8 @@ def main(argv: list[str] | None = None) -> int:
         from .commands.health import run
     elif args.command == "init":
         from .commands.init import run
+    elif args.command == "assessment":
+        from .commands.assessment import run
     elif args.command == "start-step":
         from .commands.start_step import run
     elif args.command == "checkpoint":
@@ -323,6 +357,8 @@ def main(argv: list[str] | None = None) -> int:
         from .commands.complete_step import run
     elif args.command == "decide":
         from .commands.decide import run
+    elif args.command == "policy-source":
+        from .policy_source import run
     elif args.command == "finding":
         from .commands.finding import run
     elif args.command == "review-audit":

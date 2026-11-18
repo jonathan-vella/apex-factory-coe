@@ -19,6 +19,113 @@ from dlib import *  # noqa: E402, F403
 
 ---
 
+## 0. End-to-End Architecture Overview (`gen02` Style — Primary Pattern)
+
+Wraps the canvas in an outer `tenant()` boundary with a top-left visual `legend()`,
+shared platform / edge band at the top, workload subscription below with left-to-right
+spatial columns (`rg-datacenter` / operator estate → `rg-spoke` VNet with compact
+`snet-*` cards → `rg-workload` with compact 1-line `h=44` service cards grouped by
+`vbracket()` to `snet-pe` and `snet-app`), inline `chip()` connector labels, and a
+bottom 5-stage `chevron()` lifecycle strip + centered summary pill.
+
+Azure SQL Database stays outside the VNet and uses a private endpoint in `snet-pe`,
+alongside Container Registry, Blob Storage, Service Bus, and Key Vault. App Service
+uses `snet-app` for outbound VNet integration; no delegated data subnet is needed.
+
+```python
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(".github/skills/apex-python-diagrams/scripts").resolve()))
+from dlib import *  # noqa: E402, F403
+
+reset()
+
+# Outer Microsoft Entra tenant frame + top-left visual connector legend
+add(tenant(30, 80, 1860, 940, "Microsoft Entra tenant"))
+add(
+    legend(
+        60,
+        172,
+        [
+            ("peer", "VNet peering"),
+            ("net", "Private network"),
+            ("dns", "Private DNS link"),
+        ],
+    )
+)
+
+# Shared platform / edge subscription
+add(sub(300, 132, 1320, 225, "Shared platform subscription", BL, "#F5FAFF", "SHARED PLATFORM", 220))
+add(rg(320, 180, 800, 167, "rg-hub", BL))
+add(box(335, 222, 500, 118, BLF, BL, sw=1.8) + ic("vnet", 347, 226, 28) + t(383, 247, "vnet-hub  10.100.0.0/16", 20, "700", BL))
+add(card(355, 254, 460, 70, "fw", [("Azure Firewall Standard", 1), ("DNS proxy & east-west inspection", 0)], "#FFFFFF", BL, 44))
+add(box(880, 222, 225, 118, TLF, TL, sw=1.8) + ic("dns", 892, 232, 40) + t(940, 252, "Central private", 18, "700") + t(940, 274, "DNS zones", 18, "700") + t(892, 320, "Linked to vnet-hub", 15, fill=GR))
+add(arr("M880 281H835", "dns"))
+
+add(rg(1140, 180, 460, 167, "rg-management", BL))
+add(card(1155, 222, 430, 54, "law", [("Central Log Analytics", 1)], BLF, BL, 36))
+add(card(1155, 284, 430, 54, "mi", [("id-platform-directory", 1)], BLF, BL, 36))
+
+# Workload subscription (3 spatial columns inside)
+add(sub(60, 410, 1800, 505, "Workload subscription (swedencentral)", TL, "#F2FAF8", "WORKLOAD SPOKE", 220))
+
+# Column 1: Operator & private runner estate
+add(rg(75, 470, 600, 430, "rg-operations", TL))
+add(box(90, 515, 570, 345, "#FFFFFF", TL, sw=1.8) + ic("vnet", 102, 520, 30) + t(140, 543, "vnet-ops  10.10.0.0/24", 20, "700", TL))
+add(card(105, 575, 265, 115, "vm", [("vm-runner-01", 1), ("Ubuntu 24.04", 0), ("Private runner", 0)], TLF, TL, 44))
+add(card(385, 575, 265, 115, "dev", [("Operator desktop", 1), ("Bastion SSH / SFTP", 0), ("Zero public VM IPs", 0)], GRF, SL, 44))
+add(card(105, 715, 265, 105, "bas", [("Bastion Standard", 1), ("Native SSH tunnel", 0)], TLF, TL, 44))
+add(card(385, 715, 265, 105, "nat", [("NAT Gateway", 1), ("Outbound HTTPS egress", 0)], TLF, TL, 44))
+
+# Column 2: Spoke VNet & Subnets
+add(rg(760, 470, 330, 430, "rg-spoke", TL, 110))
+add(box(775, 515, 300, 355, "#FFFFFF", TL, sw=1.8) + ic("vnet", 787, 520, 30) + t(825, 543, "vnet-spoke", 20, "700", TL))
+for y, n, c in [
+    (680, "snet-pe", "Private endpoints"),
+    (782, "snet-app", "VNet integration"),
+]:
+    add(card(790, y, 270, 84, "subnet", [(n, 1), (c, 0)], TLF, TL, 40))
+
+# Column 3: Compact 1-line workload services + vbracket fan-out
+add(rg(1330, 470, 510, 430, "rg-workload-prod", TL))
+items = [
+    ("sqldb", "Azure SQL Database"),
+    ("acr", "Container Registry"),
+    ("blob", "Blob Storage"),
+    ("sb", "Service Bus"),
+    ("kv", "Key Vault"),
+    ("app", "App Service Linux"),
+    ("ai", "Application Insights"),
+]
+for i, (k, l) in enumerate(items):
+    cy = 552 + 52 * i
+    add(card(1372, cy - 22, 350, 44, k, [(l, 1)], TLF, TL, 32))
+
+# Cross-boundary connectors, bracket fan-out & inline chips
+add(arr("M560 340V515", "net", True, True) + chip(632, 392, 120, "VNet peering", BL, size=15))
+add(arr("M800 340V515", "net", True, True) + chip(872, 392, 120, "VNet peering", BL, size=15))
+add(vbracket(1358, 530, 782) + arr("M1358 656H1300V722H1060", "net", end=False) + t(1105, 714, "5 private endpoints", 16, "700"))
+add(arr("M1372 812H1060", "net") + t(1105, 803, "Outbound VNet integration", 16, "700"))
+add(chip(1215, 496, 200, "Uses the vended spoke", BL, BLF, 15))
+
+# Bottom 5-stage chevron bar + centered summary pill
+steps = [
+    ("Phase 1", "Foundation & DNS"),
+    ("Phase 2", "Security & Bastion"),
+    ("Phase 3", "Private Data & AI"),
+    ("Phase 4", "App Compute & RBAC"),
+    ("Phase 5", "Global Edge & Verify"),
+]
+for i, (c, s) in enumerate(steps):
+    add(chevron(60 + i * 360, 937, 352, 44, c, s))
+add(chip(960, 1003, 640, "PaaS data: public access disabled; private endpoints + DNS", AM, AMF, 16))
+
+finish("agent-output/my-project/03-des-diagram", "End-to-end architecture overview")
+```
+
+---
+
 ## 1. Hub-and-Spoke Routing & Private Endpoints
 
 Shows shared hub firewall inspection, spoke VNet peering, UDR route tables,
@@ -251,6 +358,67 @@ for col, title, line1, line2 in [
     )
 
 finish("agent-output/my-project/04-deployment-pipeline", "Phased infrastructure deployment pipeline")
+```
+
+---
+
+## 5. Multi-Subscription Existing-State Assessment (`assessment` Profile)
+
+For standalone WAF assessments across `1–10` subscriptions, render **all observed resource families**
+from `_meta/live-inventory.json` and `_meta/controls-evidence.json` rather than omitting subscriptions
+without VNet peering rows:
+
+- **Left / Top**: Shared platform / hub subscription (`rg-hub`, `vnet-hub`, Firewall, Bastion, Private DNS zones, central Log Analytics workspace).
+- **Center**: Detailed primary workload stamp (`rg-spoke` VNet + subnets + Private Endpoints, `rg-datacenter` VMs/Arc, workload RG service cards with SKUs and counts).
+- **Right**: Per-subscription Stamp Summary & Drift cards for sibling subscriptions (resource count, top families, monthly spend, peering status, and amber/red region-drift badges; muted slate card for empty/torn-down scopes).
+- **Epistemic visual encoding**: Solid `net`/`peer`/`tel` connectors = observed ARM configuration/peering; dashed `mig`/`AM` connectors = user-declared runtime flows (unverified); bottom unknown/caveat strip kept `<= 95px` (`< 10%` of canvas height).
+
+```python
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(".github/skills/apex-python-diagrams/scripts").resolve()))
+from dlib import *  # noqa: E402, F403
+
+reset()
+add(t(50, 102, "OBSERVED ARM SNAPSHOT  •  solid = observed config/peering  •  dashed amber = declared flow (unverified)", 18, "700", NAVY))
+
+# Shared hub subscription
+add(sub(35, 125, 480, 760, "Shared Hub Subscription", BL, "#F5FAFF", "OBSERVED • 21 RES", 190))
+add(rg(52, 178, 446, 430, "rg-hub", BL))
+add(card(70, 226, 410, 66, "vnet", [("vnet-hub", 1), ("Reciprocal peering connected", 0)], "#FFFFFF", BL))
+add(card(70, 310, 410, 66, "fw", [("Azure Firewall", 1), ("Shared east-west / egress hub", 0)], "#FFFFFF", BL))
+add(card(70, 394, 410, 66, "dns", [("4 Private DNS Zones", 1), ("4 VNet links observed", 0)], "#FFFFFF", BL))
+add(rg(52, 628, 446, 235, "rg-management", BL))
+add(card(70, 680, 410, 72, "law", [("log-management", 1), ("30-day retention • Sweden Central", 0)], "#FFFFFF", BL))
+
+# Primary observed workload subscription
+add(sub(555, 125, 760, 760, "Workload 01 Subscription", TL, "#F2FAF8", "OBSERVED • 75 RES", 190))
+add(rg(575, 178, 720, 430, "rg-spoke + rg-university", TL))
+add(card(595, 226, 325, 66, "vnet", [("vnet-spoke", 1), ("snet-app, snet-pe, snet-sqlmi", 0)], "#FFFFFF", TL))
+add(card(950, 226, 325, 66, "app", [("App Service (P0v3)", 1), ("HTTPS-only • VNet integrated", 0)], "#FFFFFF", TL))
+add(card(595, 314, 325, 66, "sqlmi", [("SQL Managed Instance", 1), ("GP Gen5 4 vCore • LRS • no AZ", 0)], "#FFFFFF", TL))
+add(card(950, 314, 325, 66, "pe", [("4 Private Endpoints", 1), ("ACR, KV, Blob, Service Bus", 0)], "#FFFFFF", TL))
+add(rg(575, 628, 720, 235, "rg-datacenter", SL))
+add(card(595, 680, 680, 72, "vm", [("2 Simulated Datacenter VMs + Arc", 1), ("vnet-datacenter peered to hub", 0)], "#FFFFFF", SL))
+
+# Sibling subscription summary & drift cards
+add(sub(1355, 125, 530, 460, "Workload 02 Subscription", AM, AMF, "DRIFT • 111 RES", 175))
+add(card(1375, 190, 490, 72, "bas", [("Standard Bastion + VMs", 1), ("No hub peering • top cost driver", 0)], "#FFFFFF", AM))
+add(card(1375, 282, 490, 72, "sqldb", [("2 App Sites + SQL DB + Arc/Migrate", 1), ("Divergent non-MI stamp", 0)], "#FFFFFF", AM))
+add(card(1375, 374, 490, 72, "kv", [("Region Drift Observed", 1), ("Resources in North Europe & West US 2", 0)], "#FFFFFF", AM))
+
+add(sub(1355, 610, 530, 275, "Workload 03 Subscription", SL, GRF, "MINIMAL • 3 RES", 175))
+add(card(1375, 680, 490, 72, "mon", [("Network Watcher + Action Group + LAW", 1), ("Workload stamp unprovisioned / torn down", 0)], "#FFFFFF", SL))
+
+# Connectors + compact <=90px caveat strip
+add(arr("M480 259H595", "net", start=True))
+add(arr("M950 259H920V347H920", "mig"))
+add(box(35, 910, 1850, 82, AMF, AM, sw=1.5))
+add(t(55, 943, "UNVERIFIED: End-to-end runtime traffic, effective RBAC/DNS resolution, restore/cutover drills, and log ingestion.", 17, "700", NAVY))
+add(t(55, 972, "Observed configuration references and peerings do not establish live reachability or policy compliance.", 16, "400", GR))
+
+finish("agent-output/my-project/assets/03-des-diagram", "Existing-State Multi-Subscription Architecture")
 ```
 
 ---

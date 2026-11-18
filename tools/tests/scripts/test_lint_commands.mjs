@@ -134,6 +134,18 @@ test("product CI retains coverage while migrated docs automation stays retired",
   }
 });
 
+test("CI installs pinned Python tooling before executable Node workbook contracts", { skip: CI_SKIP }, () => {
+  const ci = load(readFileSync(new URL("../../../.github/workflows/ci.yml", import.meta.url), "utf8"));
+  const steps = ci.jobs.ci.steps;
+  const python = steps.findIndex((step) => step.uses?.startsWith("actions/setup-python@"));
+  const install = steps.findIndex((step) => step.run === "python -m pip install -r requirements.txt");
+  const contracts = steps.findIndex((step) => step.run === "npm run validate:_node-ci");
+  assert.ok(python >= 0);
+  assert.ok(install > python, "Install the canonical Python requirements after interpreter setup");
+  assert.ok(contracts > install, "Workbook subprocess dependencies must exist before Node contract tests");
+  assert.equal(steps[install].if, undefined);
+});
+
 test(
   "hook retirement removes obsolete callers while retaining Git hooks and validation coverage",
   { skip: CI_SKIP },
@@ -268,11 +280,15 @@ test("artifact hook validates template-only and output changes and propagates ga
   }
 });
 
-test("active registry rejects retired prompts even when their former paths exist", (context) => {
+test("active registry accepts native prompts but rejects retired roots even when files exist", (context) => {
   const root = fixture(context);
   mkdirSync(path.join(root, "tools/registry"), { recursive: true });
   mkdirSync(path.join(root, ".github/prompts"), { recursive: true });
   writeFileSync(path.join(root, ".github/prompts/resume.prompt.md"), '---\nagent: "01-Orchestrator"\n---\n# Resume\n');
+  for (const retired of ["tools/apex-prompts", ".archive/pre-cpharness/github-prompts"]) {
+    mkdirSync(path.join(root, retired), { recursive: true });
+    writeFileSync(path.join(root, retired, "resume.prompt.md"), '---\nagent: "01-Orchestrator"\n---\n# Resume\n');
+  }
   writeFileSync(
     path.join(root, ".github/prompts/explicit.prompt.md"),
     '---\nagent: agent\nmodel: "Example Model"\n---\n# Task\n',
@@ -287,11 +303,14 @@ test("active registry rejects retired prompts even when their former paths exist
   };
   const inherited = { prompt: ".github/prompts/resume.prompt.md", model: null, invokable: true };
   assert.equal(runRegistry(null), 0);
-  assert.equal(runRegistry(inherited), 1);
+  assert.equal(runRegistry(inherited), 0);
   assert.equal(
     runRegistry({ prompt: ".github/prompts/explicit.prompt.md", model: "Example Model", invokable: true }),
-    1,
+    0,
   );
+  for (const retired of ["tools/apex-prompts", ".archive/pre-cpharness/github-prompts"]) {
+    assert.equal(runRegistry({ ...inherited, prompt: `${retired}/resume.prompt.md` }), 1);
+  }
   assert.equal(runRegistry({ ...inherited, prompt: ".github/prompts/missing.prompt.md" }), 1);
   assert.equal(runRegistry({ ...inherited, model: "Wrong" }), 1);
   assert.equal(runRegistry({ ...inherited, invokable: "yes" }), 1);

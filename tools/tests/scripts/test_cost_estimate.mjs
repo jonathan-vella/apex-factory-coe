@@ -2,32 +2,41 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
-import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { createAjv } from "../../scripts/_lib/ajv-validator.mjs";
+import { evidenceBackedFixture, fixtureRequestOptions } from "./test_cost_estimate_fixture.mjs";
 import {
   calculateLineCost,
-  calculateScenarios,
+  calculateScenarios as strictCalculateScenarios,
   normalizeCostRequest,
-  publishEstimate,
+  publishEstimate as strictPublishEstimate,
   resolveWorkspacePath,
   round6,
   validateCostRequest,
-  validateEstimate,
+  validateEstimate as strictValidateEstimate,
 } from "../../scripts/cost-estimate.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, "../../..");
 const SCRIPT = path.join(ROOT, "tools/scripts/cost-estimate.mjs");
+const validateEstimate = (estimate, options) =>
+  strictValidateEstimate(estimate, fixtureRequestOptions(estimate, options));
+const calculateScenarios = (estimate, scenarios, options) =>
+  strictCalculateScenarios(estimate, scenarios, fixtureRequestOptions(estimate, options));
+const publishEstimate = (options) =>
+  strictPublishEstimate({
+    ...options,
+    requestPath: options.requestPath ?? path.join(path.dirname(options.draftPath), "pricing-request.json"),
+  });
 
 test("equivalent scenarios reuse retained calculation inputs without new price queries", (t) => {
-  const dir = fs.mkdtempSync(path.join(tmpdir(), "apex-scenarios-"));
+  const dir = fs.mkdtempSync(path.join(HERE, ".apex-scenarios-"));
   t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
   const outputPath = path.join(dir, "estimate.json");
   const draftPath = path.join(dir, "draft.json");
-  const now = new Date("2026-10-23T00:00:00Z");
+  let now = new Date();
   const draft = {
     status: "COMPLETE",
     project_name: "synthetic",
@@ -40,6 +49,7 @@ test("equivalent scenarios reuse retained calculation inputs without new price q
         sku: "Synthetic tier",
         region: "swedencentral",
         quantity: 1,
+        subscription: "workload",
         unit_of_measure: "1 GB",
         retail_price: 1,
         usage_amount: 10,
@@ -57,9 +67,12 @@ test("equivalent scenarios reuse retained calculation inputs without new price q
     mcp_calls_used: 1,
     budget_exceeded: false,
   };
-  fs.writeFileSync(draftPath, JSON.stringify(draft));
+  fs.writeFileSync(draftPath, JSON.stringify(evidenceBackedFixture(draft, dir, { cwd: ROOT })));
   const { estimate } = publishEstimate({ draftPath, outputPath });
+  now = new Date();
   assert.ok(estimate.resources[0].calculation_basis);
+  assert.equal(estimate.resources[0].subscription, "workload");
+  assert.equal(JSON.parse(fs.readFileSync(outputPath, "utf8")).resources[0].subscription, "workload");
   const before = JSON.stringify(estimate);
   const result = calculateScenarios(
     estimate,
@@ -83,12 +96,10 @@ test("equivalent scenarios reuse retained calculation inputs without new price q
   }
   assert.throws(() => calculateScenarios(estimate, { expected: {} }, { now: new Date("2027-01-01") }), /stale/);
   const tampered = structuredClone(estimate);
-  tampered.resources[0].calculation_basis.retail_price = 2;
-  assert.throws(() => calculateScenarios(tampered, { expected: {} }, { now }), /basis differs/);
+  tampered.resources[0].calculation_basis.components[0].retail_price = 2;
+  assert.throws(() => calculateScenarios(tampered, { expected: {} }, { now }), /Native rate mismatch/);
   const componentQuantities = structuredClone(estimate);
-  componentQuantities.resources[0].calculation_basis.components = [
-    { quantity: 1, unit_of_measure: "1 GB", retail_price: 1, usage_amount: 10 },
-  ];
+  componentQuantities.resources[0].calculation_basis.components[0].quantity = 1;
   assert.throws(
     () => calculateScenarios(componentQuantities, { growth: { "synthetic-meter": { quantity: 2 } } }, { now }),
     /Component-specific quantities/,
@@ -177,7 +188,7 @@ test("resolveWorkspacePath prevents double-prefixed agent-output paths when shel
 });
 
 test("preflight enforces single input mode, variable usage, alert frequency, and stale draft checks", (context) => {
-  const dir = fs.mkdtempSync(path.join(tmpdir(), "apex-cost-preflight-"));
+  const dir = fs.mkdtempSync(path.join(HERE, ".apex-cost-preflight-"));
   context.after(() => fs.rmSync(dir, { recursive: true, force: true }));
 
   const manifestPath = path.join(dir, "sku-manifest.json");
@@ -251,7 +262,7 @@ test("preflight enforces single input mode, variable usage, alert frequency, and
 });
 
 test("manifest expansion preserves sparse environment overrides and rejects supplemental ID collisions", (context) => {
-  const dir = fs.mkdtempSync(path.join(tmpdir(), "apex-cost-expand-"));
+  const dir = fs.mkdtempSync(path.join(HERE, ".apex-cost-expand-"));
   context.after(() => fs.rmSync(dir, { recursive: true, force: true }));
 
   const manifest = makeManifest({
@@ -308,6 +319,109 @@ test("manifest expansion preserves sparse environment overrides and rejects supp
       }),
     /collides with manifest service id/,
   );
+});
+
+test("manifest expansion propagates stamp subscription, service fallback, or null without changing pricing inputs", (context) => {
+  const dir = fs.mkdtempSync(path.join(HERE, ".cost-subscriptions-"));
+  context.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const manifestPath = path.join(dir, "sku-manifest.json");
+  const scenarios = [
+    { serviceSubscription: undefined, stampSubscription: undefined, stamped: false, expected: null },
+    { serviceSubscription: "hub", stampSubscription: undefined, stamped: false, expected: "hub" },
+    { serviceSubscription: undefined, stampSubscription: undefined, stamped: true, expected: null },
+    { serviceSubscription: "hub", stampSubscription: undefined, stamped: true, expected: "hub" },
+    { serviceSubscription: undefined, stampSubscription: "spoke", stamped: true, expected: "spoke" },
+    { serviceSubscription: "hub", stampSubscription: "hub", stamped: true, expected: "hub" },
+    // The validator rejects conflicting declarations; expansion still has deterministic precedence.
+    { serviceSubscription: "hub", stampSubscription: "spoke", stamped: true, expected: "spoke" },
+  ];
+  for (const { serviceSubscription, stampSubscription, stamped, expected } of scenarios) {
+    const manifest = makeManifest({ environments: ["dev", "prod"] });
+    for (const service of manifest.services) {
+      service.subscription = serviceSubscription;
+      service.observed_sku = "Original";
+      service.environment_overrides = { dev: { size: "Smaller", capacity: { mode: "fixed", default: 2 } } };
+    }
+    if (stamped) {
+      manifest.stamps = [
+        { id: "eu", regions: ["swedencentral", "germanywestcentral"], subscription: stampSubscription },
+      ];
+    }
+    fs.writeFileSync(manifestPath, JSON.stringify(manifest));
+    const normalized = normalizeCostRequest({
+      project_name: "demo",
+      region: "swedencentral",
+      output_path: path.join(dir, "out.json"),
+      manifest_path: manifestPath,
+    });
+
+    assert.equal(normalized.lines.length, stamped ? 12 : 6);
+    for (const line of normalized.lines) {
+      assert.equal(line.subscription, expected);
+      assert.equal(line.stamp, stamped ? "eu" : null);
+      assert.equal(
+        line.sku,
+        line.environment === "dev" ? "Smaller" : manifest.services.find((s) => s.id === line.manifest_service_id).size,
+      );
+      assert.equal(line.quantity, line.environment === "dev" ? 2 : 1);
+      assert.notEqual(line.sku, "Original", "pricing uses recommended size, not intake evidence");
+    }
+    assert.deepEqual(JSON.parse(fs.readFileSync(manifestPath, "utf8")), JSON.parse(JSON.stringify(manifest)));
+  }
+});
+
+test("unknown observed or user-pinned capacity or commitment cannot become implicit pricing assumptions", (context) => {
+  const dir = fs.mkdtempSync(path.join(HERE, ".observed-pricing-"));
+  context.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const file = path.join(dir, "sku-manifest.json");
+  for (const [source, missing] of ["observed-current", "user-pin"].flatMap((source) =>
+    ["capacity", "commitment"].map((missing) => [source, missing]),
+  )) {
+    const manifest = makeManifest();
+    manifest.services = [manifest.services[0]];
+    manifest.services[0].source = source;
+    manifest.services[0].observed_sku = manifest.services[0].size;
+    delete manifest.services[0][missing];
+    fs.writeFileSync(file, JSON.stringify(manifest));
+    assert.throws(
+      () =>
+        normalizeCostRequest({
+          project_name: "demo",
+          region: "swedencentral",
+          output_path: path.join(dir, "out.json"),
+          manifest_path: file,
+        }),
+      /requires explicit capacity.default and commitment.type/,
+    );
+  }
+});
+
+test("manifest expansion retains distinct subscription attribution across multi-region stamps", (context) => {
+  const dir = fs.mkdtempSync(path.join(HERE, ".cost-stamps-"));
+  context.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const manifestPath = path.join(dir, "sku-manifest.json");
+  const manifest = makeManifest({
+    stamps: [
+      { id: "shared", subscription: "hub", regions: ["swedencentral"], environments: ["dev"] },
+      {
+        id: "workload",
+        subscription: "spoke",
+        regions: ["swedencentral", "germanywestcentral"],
+        environments: ["dev"],
+      },
+    ],
+  });
+  fs.writeFileSync(manifestPath, JSON.stringify(manifest));
+  const normalized = normalizeCostRequest({
+    project_name: "demo",
+    region: "swedencentral",
+    output_path: path.join(dir, "out.json"),
+    manifest_path: manifestPath,
+  });
+  assert.equal(normalized.lines.length, 9);
+  assert.equal(normalized.lines.filter((line) => line.subscription === "hub").length, 3);
+  assert.equal(normalized.lines.filter((line) => line.subscription === "spoke").length, 6);
+  assert.equal(new Set(normalized.lines.map((line) => line.name)).size, 9);
 });
 
 test("calculateLineCost computes deterministic unit and tiered band totals without double-multiplying aggregate usage", () => {
@@ -421,7 +535,7 @@ test("calculateLineCost computes deterministic unit and tiered band totals witho
 });
 
 test("publishEstimate normalizes totals, writes back only manifest services, and handles !name notes via CLI", (context) => {
-  const dir = fs.mkdtempSync(path.join(tmpdir(), "apex-cost-publish-"));
+  const dir = fs.mkdtempSync(path.join(HERE, ".apex-cost-publish-"));
   context.after(() => fs.rmSync(dir, { recursive: true, force: true }));
 
   const manifestPath = path.join(dir, "sku-manifest.json");
@@ -497,11 +611,22 @@ test("publishEstimate normalizes totals, writes back only manifest services, and
     mcp_calls_used: 4,
     budget_exceeded: false,
   };
-  fs.writeFileSync(draftPath, JSON.stringify(draft, null, 2));
+  fs.writeFileSync(draftPath, JSON.stringify(evidenceBackedFixture(draft, dir, { cwd: ROOT }), null, 2));
 
   const cli = spawnSync(
     process.execPath,
-    [SCRIPT, "publish", "--draft", draftPath, "--output", outputPath, "--manifest", manifestPath],
+    [
+      SCRIPT,
+      "publish",
+      "--draft",
+      draftPath,
+      "--output",
+      outputPath,
+      "--manifest",
+      manifestPath,
+      "--request",
+      path.join(dir, "pricing-request.json"),
+    ],
     { encoding: "utf8", timeout: 5000 },
   );
   assert.equal(cli.status, 0, cli.stderr);
@@ -527,7 +652,7 @@ test("publishEstimate normalizes totals, writes back only manifest services, and
 });
 
 test("validateEstimate verifies retail_api_evidence SHA-256 and meterIds and flags legacy closest-meter assumptions", (context) => {
-  const dir = fs.mkdtempSync(path.join(tmpdir(), "apex-cost-evidence-"));
+  const dir = fs.mkdtempSync(path.join(HERE, ".apex-cost-evidence-"));
   context.after(() => fs.rmSync(dir, { recursive: true, force: true }));
 
   const rawPage = JSON.stringify({
@@ -597,12 +722,12 @@ test("validateEstimate verifies retail_api_evidence SHA-256 and meterIds and fla
   assert.match(res.warnings[0], /closest published/);
 
   estimate.retail_api_evidence[0].selected_meters[0].meterId = "wrong-meter-id";
-  const bad = validateEstimate(estimate, { cwd: dir });
+  const bad = validateEstimate(estimate, { cwd: dir, legacyAudit: true });
   assert.equal(bad.ok, false);
   assert.match(bad.errors[0], /not found in/);
 });
 
-test("cost-estimate.schema.json compiles with Ajv and validates fixture and published estimates", () => {
+test("cost-estimate.schema.json compiles with Ajv and validates fixture and published estimates", (context) => {
   const ajv = createAjv();
   const schema = JSON.parse(fs.readFileSync(path.join(ROOT, "tools/schemas/cost-estimate.schema.json"), "utf8"));
   const validate = ajv.compile(schema);
@@ -610,4 +735,27 @@ test("cost-estimate.schema.json compiles with Ajv and validates fixture and publ
     fs.readFileSync(path.join(ROOT, "tools/tests/fixtures/subagent-file-contract/cost-estimate.findings.json"), "utf8"),
   );
   assert.equal(validate(fixture), true, JSON.stringify(validate.errors));
+  for (const subscription of ["workload", null]) {
+    const attributed = structuredClone(fixture);
+    attributed.resources[0].subscription = subscription;
+    assert.equal(validate(attributed), true, JSON.stringify(validate.errors));
+  }
+  for (const subscription of [42, "", {}]) {
+    const invalid = structuredClone(fixture);
+    invalid.resources[0].subscription = subscription;
+    assert.equal(validate(invalid), false);
+  }
+  const dir = fs.mkdtempSync(path.join(HERE, ".published-subscription-"));
+  context.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  fixture.resources[0].subscription = "workload";
+  fixture.resources[1].subscription = null;
+  for (const resource of fixture.resources) resource.service_name = "Azure App Service";
+  const draftPath = path.join(dir, "draft.json");
+  const outputPath = path.join(dir, "published.json");
+  fs.writeFileSync(draftPath, JSON.stringify(evidenceBackedFixture(fixture, dir, { cwd: ROOT })));
+  publishEstimate({ draftPath, outputPath });
+  const published = JSON.parse(fs.readFileSync(outputPath, "utf8"));
+  assert.equal(validate(published), true, JSON.stringify(validate.errors));
+  assert.equal(published.resources[0].subscription, "workload");
+  assert.equal(published.resources[1].subscription, null);
 });

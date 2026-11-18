@@ -257,6 +257,9 @@ def validate_state(data: dict) -> None:
     from .practical import validate_state as validate_practical_state
 
     validate_practical_state(data)
+    from .assessment import validate_state as validate_assessment_state
+
+    validate_assessment_state(data)
     if not isinstance(attempts, list) or any(
         not isinstance(attempt, dict)
         or attempt.get("schema_version") != "review-attempt-v1"
@@ -267,7 +270,7 @@ def validate_state(data: dict) -> None:
             "review_output" in attempt
             and (
                 attempt["review_output"] not in ("empty", "nonempty", "unknown")
-                or attempt["kind"] not in ("invocation", "empty-output-retry")
+                or attempt["kind"] not in ("invocation", "empty-output-retry", "publication-retry")
                 or attempt["outcome"] not in ("completed", "failed")
             )
         )

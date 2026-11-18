@@ -41,9 +41,13 @@ Specifically:
 | --------------- | ----------------------------------------------------------------------------------------------- | ------------------------------- | --------------- | --------------------------------------------------- |
 | `iac_tool`          | `Bicep` \| `Terraform`                                                                          | Orchestrator prompts the user   | 01-Orchestrator                      | 05-IaC Planner, 06b/06t CodeGen, 07b/07t Deploy     |
 | `workflow_contract` | `practical-v1` \| `legacy`                                                                      | `legacy` (existing projects)    | `apex-recall init`, 01-Orchestrator  | All workflow agents                                 |
+| `policy_evidence_contract` | `corp-policy-v1` | Legacy evidence rules until explicit source choice | New delivery init; `policy-source` | Architecture and implementation gates |
+| `workflow_mode` | `assessment` | Existing numeric delivery workflow | Recall assessment start/adopt from explicit scope approval | Profile routing, terminal handoff and assessment readiness |
 | `region`            | Azure region ID (e.g. `swedencentral`)                                                          | `swedencentral`                 | 02-Requirements                      | All Azure-resource-emitting agents                  |
 | `complexity`        | `simple` \| `standard` \| `complex`                                                             | `standard`                      | 01-Orchestrator, 02-Requirements     | Challenger lens selection                           |
 | `review_depth`      | `default` \| `deep`                                                                             | `default` (single-pass reviews) | 01-Orchestrator                      | All adversarial review invocations                  |
+| `assessment_exit` | `assessment_only` \| `implementation` | Strict implementation prerequisites; no implicit assessment-only waiver | 03-Architect, 01-Orchestrator from actual owner choice | Recall completion; policy feasibility |
+| `assessment_cost_status` | `not_assessed` | Normal pricing gate applies | 03-Architect when no evidence is priceable | Recall validates the NOT_ASSESSED contract; both independent reviews remain |
 | `governance_depth`  | `light` \| `full`                                                                               | `light`                         | 01-Orchestrator                      | 04g-Governance, 05-IaC Planner                      |
 | `identity_resolution` | `auto` \| `manual`                                                                            | `auto`                          | 01-Orchestrator                      | 05-IaC Planner, 06b/06t CodeGen                     |
 | `diagnostics_strategy` | `avm` \| `module` \| `auto`                                                                  | `auto`                          | 01-Orchestrator                      | 06b/06t CodeGen                                     |
@@ -54,6 +58,14 @@ Specifically:
 | `challenger_skip`   | list of `{step, reason, recorded}`                                                              | n/a (no skips)                  | apex-recall (`--allow-missing-challenger`) | Audit only                                    |
 | `order_overrides`   | list of `{step, problem, reason, recorded}`                                                     | n/a (no overrides)              | apex-recall (`--allow-out-of-order`) | Audit only                                          |
 | `relational_db`     | `azure-sql` \| `postgresql-flex` \| `mysql-flex` \| `sql-managed-instance` \| `none` \| `other` | n/a (Phase 3d question)         | 02-Requirements                      | 03-Architect (SKU), 05-IaC Planner, 06b/06t CodeGen |
+
+### Policy-source material inputs
+
+Policy-source material inputs use the existing scoped ledger, not generic decision strings:
+`policy_source.value` is `{kind: "assumed-corp", sha256: "<shared-file-hash>"}` or `{kind: "tenant"}`.
+Private `azure_read_scope.value` contains `scope_ref`, `scope_sha256` and
+`policy_read_scope: "subscription-and-inherited"`; actual identifiers and native consent stay in the managed private store.
+See [policy-source capture](../../../.github/skills/apex-azure-governance-discovery/references/policy-source.md).
 
 ### Challenger-loop keys (Plan 01 Phase 2b)
 
@@ -72,14 +84,14 @@ The `<step>` suffix is the integer step number (`1`, `2`, `3_5`, `4`).
 
 | Key                       | Valid values                                                              | Default behaviour if absent        | Set by          | Read by                                  |
 | ------------------------- | ------------------------------------------------------------------------- | ---------------------------------- | --------------- | ---------------------------------------- |
-| `sku_confirmation_status` | `approved` \| `revising`                                                  | Architect raises 6a gate           | 03-Architect    | 03-Architect step 7 pricing precondition |
-| `budget_cap_known`        | `true` \| `false`                                                         | `false` (skip budget gate)         | 02-Requirements | 03-Architect step 9a budget gate         |
+| `sku_confirmation_status` | `approved` \| `revising` | 03-Architect raises 6a for implementation planning; Assessment skips | 03-Architect | 03-Architect pricing precondition |
+| `budget_cap_known`        | `true` \| `false` | `false` (Assessment skips; implementation planning applies 9a) | 02-Requirements | 03-Architect step 9a budget gate |
 | `budget_decision`         | `approve_overage` \| `revise_sku` \| `revise_reqs`                        | n/a (only set when 9a fires)       | 03-Architect    | 03-Architect routing                     |
 | `budget_revise_count`     | integer 0..3                                                              | `0`                                | 03-Architect    | 03-Architect 3-iteration cap             |
 | `cost_feasibility_review` | `run` \| `skip`                                                           | n/a (only set after lens decision) | 03-Architect    | 03-Architect challenger invocation       |
 | `sku_manifest_status`     | `draft` \| `reviewed` \| `locked` \| `deploying` \| `deployed` \| `drift` | n/a                                | various         | 05/06/07 agents                          |
 | `sku_manifest_revision`   | integer ≥ 1                                                               | `1`                                | various         | sku-manifest validators                  |
-| `sku_preferences_captured`| `true` \| `false`                                                         | `false` (Phase 3j elicitation skipped) | 02-Requirements | 03-Architect, sku-manifest validators    |
+| `sku_preferences_captured`| `true` \| `false`                                                         | `false` (elicitation skipped; not required for Assessment) | 02-Requirements | 03-Architect, sku-manifest validators    |
 
 ### Step 3 (Design) keys — new in this plan
 
